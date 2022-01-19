@@ -53,7 +53,7 @@ func CLI() *cli.App {
 		Usage:       "MAC Address CLI Toolkit",
 		Action:      MainCmd,
 		Commands:    subs,
-		Version:     "0.0.7",
+		Version:     Version,
 		HideVersion: false,
 	}
 

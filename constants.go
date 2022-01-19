@@ -1,6 +1,10 @@
 package main
 
-import "golang.org/x/text/language"
+import (
+	_ "embed"
+
+	"golang.org/x/text/language"
+)
 
 const (
 	_ouiListUrl   string = "https://gitlab.com/wireshark/wireshark/-/raw/master/manuf"
@@ -12,3 +16,6 @@ const (
 var MaybePanic func(err error)
 
 var _locale language.Tag
+
+//go:embed .version
+var Version string
