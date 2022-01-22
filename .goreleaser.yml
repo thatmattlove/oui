@@ -1,0 +1,61 @@
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod download
+
+builds:
+  - id: nix
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - '5'
+      - '6'
+      - '7'
+  - id: win
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+    goarm:
+      - '5'
+      - '6'
+      - '7'
+
+brews:
+  - name: oui
+    tap:
+      owner: thatmattlove
+      name: homebrew-oui
+    homepage: https://github.com/thatmattlove/oui
+    description: CLI tool for MAC Addresses.
+    license: BSD-3-Clause-Clear
+    post_install: |
+      system "oui", "update"
+
+archives:
+  - replacements:
+      386: amd32
+      darwin: macOS
+      linux: linux
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: '{{ .Tag }}-next'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
