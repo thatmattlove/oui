@@ -1,6 +1,5 @@
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod download
 
 builds:
@@ -9,7 +8,6 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
       - arm
@@ -29,18 +27,19 @@ builds:
       - '5'
       - '6'
       - '7'
-
-brews:
-  - name: oui
-    tap:
-      owner: thatmattlove
-      name: homebrew-oui
-    homepage: https://github.com/thatmattlove/oui
-    description: CLI tool for MAC Addresses.
-    license: BSD-3-Clause-Clear
-    post_install: |
-      system "oui", "update"
-
+  - id: darwin
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - '5'
+      - '6'
+      - '7'
 archives:
   - replacements:
       386: amd32
@@ -59,3 +58,26 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+brews:
+  - name: oui
+    tap:
+      owner: thatmattlove
+      name: homebrew-oui
+      token: '{{ .Env.TAP_GITHUB_TOKEN }}'
+    homepage: https://github.com/thatmattlove/oui
+    description: CLI tool for MAC Addresses.
+    license: BSD-3-Clause-Clear
+    post_install: |
+      system "oui", "update"
+
+nfpms:
+  - id: packages
+    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+
+publishers:
+  - name: fury.io
+    ids:
+      - packages
+    dir: '{{ dir .ArtifactPath }}'
+    cmd: curl -F package=@{{ .ArtifactPath }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/thatmattlove/
