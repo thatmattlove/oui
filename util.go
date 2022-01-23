@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -60,4 +61,9 @@ func setLocale() {
 		tag = language.English
 	}
 	_locale = tag
+}
+
+func containsStr(arr []string, search string) bool {
+	i := sort.SearchStrings(arr, search)
+	return i < len(arr) && arr[i] == search
 }

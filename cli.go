@@ -19,11 +19,14 @@ var tableStyle = &table.Style{
 	Title:   table.TitleOptionsDefault,
 }
 
-func createPanicFunc() func(err error) {
+var debugFlag *cli.BoolFlag = &cli.BoolFlag{Name: "debug", Usage: "Enable debugging", Value: false}
+
+func createPanicFunc(ctx *cli.Context) func(err error) {
 	return func(err error) {
 		isTest := flag.Lookup("test.v") != nil
+		isDebug := containsStr(ctx.FlagNames(), "debug")
 		if err != nil {
-			if isTest {
+			if isTest || isDebug {
 				panic(err)
 			} else {
 				e := &text.Colors{text.FgYellow, text.Bold}
@@ -46,6 +49,8 @@ func versionPrinter(c *cli.Context) {
 func CLI() *cli.App {
 	subs := []*cli.Command{UpdateCmd(), ConvertCmd()}
 
+	flags := []cli.Flag{debugFlag}
+
 	cli.VersionPrinter = versionPrinter
 
 	cmd := &cli.App{
@@ -53,6 +58,7 @@ func CLI() *cli.App {
 		Usage:       "MAC Address CLI Toolkit",
 		Action:      MainCmd,
 		Commands:    subs,
+		Flags:       flags,
 		Version:     Version,
 		HideVersion: false,
 	}
