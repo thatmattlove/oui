@@ -3,7 +3,7 @@ before:
     - go mod download
 
 builds:
-  - id: nix
+  - id: linux
     env:
       - CGO_ENABLED=0
     goos:
