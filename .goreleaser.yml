@@ -5,7 +5,7 @@ before:
 builds:
   - id: nix
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - linux
     goarch:
@@ -18,7 +18,7 @@ builds:
       - '7'
   - id: win
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - windows
     goarch:
@@ -29,7 +29,7 @@ builds:
       - '7'
   - id: darwin
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - darwin
     goarch:
