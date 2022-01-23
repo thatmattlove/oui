@@ -61,23 +61,40 @@ changelog:
 
 brews:
   - name: oui
+    homepage: https://github.com/thatmattlove/oui
+    description: MAC Address CLI Toolkit
+    license: BSD-3-Clause-Clear
     tap:
       owner: thatmattlove
       name: homebrew-oui
       token: '{{ .Env.TAP_GITHUB_TOKEN }}'
-    homepage: https://github.com/thatmattlove/oui
-    description: CLI tool for MAC Addresses.
-    license: BSD-3-Clause-Clear
     post_install: |
       system "oui", "update"
 
 nfpms:
   - id: packages
-    file_name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    homepage: https://github.com/thatmattlove/oui
+    maintainer: Matt Love <matt@stunninglyclear.com>
+    description: MAC Address CLI Toolkit
+    license: BSD-3-Clause-Clear
+    builds:
+      - linux
+    replacements:
+      386: amd32
+      darwin: macOS
+      linux: linux
+    formats:
+      - apk
+      - deb
+      - rpm
+    dependencies:
+      - libsqlite
+    scripts:
+      postinstall: oui update
 
 publishers:
   - name: fury.io
     ids:
       - packages
     dir: '{{ dir .ArtifactPath }}'
-    cmd: curl -F package=@{{ .ArtifactPath }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/thatmattlove/
+    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/thatmattlove/
