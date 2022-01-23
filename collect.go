@@ -22,9 +22,8 @@ func processBody(b string) (l []string) {
 	return
 }
 
-func DownloadFile(p *progress.Progress) (fn string, count int, err error) {
-	d, _, err := DBFileName()
-	tf, err := os.CreateTemp(d, "data-*.txt")
+func DownloadFile(dir string, p *progress.Progress) (fn string, count int, err error) {
+	tf, err := os.CreateTemp(dir, "data-*.txt")
 	fn = tf.Name()
 	if err != nil {
 		return
@@ -97,23 +96,4 @@ func Collect(fn string, chunkSize int, prg *progress.Progress) chan VendorDef {
 	}()
 
 	return chnl
-}
-
-func Populate(p *progress.Progress) (created int, err error) {
-	db := GetDB()
-	defer db.Close()
-	f, n, err := DownloadFile(p)
-	if err != nil {
-		return
-	}
-	total := n / 48
-	p.AdvanceTo(50)
-	for def := range Collect(f, total, p) {
-		_, err = Insert(db, def)
-		if err != nil {
-			return
-		}
-		created++
-	}
-	return
 }

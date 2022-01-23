@@ -27,7 +27,7 @@ func createTable(search string) (t table.Writer) {
 }
 
 func MainCmd(c *cli.Context) error {
-	MaybePanic = createPanicFunc()
+	MaybePanic = createPanicFunc(c)
 	search := c.Args().First()
 
 	t := createTable(search)
@@ -54,7 +54,7 @@ func UpdateCmd() *cli.Command {
 		Aliases: []string{"u", "up"},
 	}
 	cmd.Action = func(c *cli.Context) error {
-		MaybePanic = createPanicFunc()
+		MaybePanic = createPanicFunc(c)
 		statuses := map[int]string{
 			10:  "Deleted old database...",
 			20:  "Created new database...",
@@ -76,7 +76,9 @@ func UpdateCmd() *cli.Command {
 			}).
 			AddWidget("bar", progress.BarWidget(50, style)).
 			AddWidget("message", progress.DynamicTextWidget(statuses))
-		num, err := UpdateTable(p)
+		ouidb, err := NewOUIDB()
+		MaybePanic(err)
+		num, err := ouidb.Populate(p)
 		p.Finish()
 		MaybePanic(err)
 		message.NewPrinter(language.English)
@@ -100,7 +102,7 @@ func ConvertCmd() *cli.Command {
 		ArgsUsage: "MAC Address to Convert",
 	}
 	cmd.Action = func(c *cli.Context) error {
-		MaybePanic = createPanicFunc()
+		MaybePanic = createPanicFunc(c)
 		i := c.Args().First()
 		f := Convert(i)
 		t := table.NewWriter()
