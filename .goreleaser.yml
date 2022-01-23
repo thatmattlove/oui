@@ -90,7 +90,7 @@ nfpms:
     dependencies:
       - libsqlite
     scripts:
-      postinstall: oui update
+      postinstall: 'scripts/linux_postinstall.sh'
 
 publishers:
   - name: fury.io
