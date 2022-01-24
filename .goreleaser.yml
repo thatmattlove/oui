@@ -87,8 +87,6 @@ nfpms:
       - apk
       - deb
       - rpm
-    dependencies:
-      - libsqlite
     scripts:
       postinstall: 'scripts/linux_postinstall.sh'
 
