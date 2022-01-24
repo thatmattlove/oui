@@ -73,7 +73,7 @@ func (ouidb *OUIDB) getFile(dn, fn string) (f *os.File, err error) {
 		return
 	}
 	if !pathExists(dn) {
-		err = os.Mkdir(dn, 0755)
+		err = os.MkdirAll(dn, os.ModePerm)
 		if err != nil {
 			return
 		}
