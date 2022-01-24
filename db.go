@@ -20,13 +20,17 @@ type OUIDB struct {
 
 func NewOUIDB() (ouidb *OUIDB, err error) {
 	ouidb = &OUIDB{}
+	err = ouidb.Delete()
+	if err != nil {
+		return
+	}
 	dir, fileName, err := ouidb.getFileName()
 	if err != nil {
 		return
 	}
 	ouidb.FileName = fileName
 	ouidb.Directory = dir
-	file, err := ouidb.getFile(fileName, dir)
+	file, err := ouidb.getFile(dir, fileName)
 	if err != nil {
 		return
 	}
@@ -135,12 +139,8 @@ func (ouidb *OUIDB) Delete() (err error) {
 		err = fmt.Errorf("OUIDB is not initialized")
 		return
 	}
-	_, f, err := ouidb.getFileName()
-	if err != nil {
-		return
-	}
-	if pathExists(f) {
-		err = os.Remove(f)
+	if pathExists(ouidb.FileName) {
+		err = os.Remove(ouidb.FileName)
 		if err != nil {
 			return
 		}
@@ -201,23 +201,13 @@ func (ouidb *OUIDB) Populate(p *progress.Progress) (records int, err error) {
 		return
 	}
 	p.Start()
-	err = ouidb.Delete()
-	p.AdvanceTo(10)
-	if err != nil {
-		return
-	}
-	err = ouidb.createTable()
-	if err != nil {
-		return
-	}
-	p.AdvanceTo(20)
 
 	f, n, err := DownloadFile(ouidb.Directory, p)
 	if err != nil {
 		return
 	}
-	total := n / 48
-	p.AdvanceTo(50)
+	total := n / 88
+	p.AdvanceTo(11)
 
 	defer ouidb.Connection.Close()
 

@@ -28,14 +28,14 @@ func DownloadFile(dir string, p *progress.Progress) (fn string, count int, err e
 	if err != nil {
 		return
 	}
-	p.AdvanceTo(30)
+	p.AdvanceTo(5)
 	res, err := http.Get(_ouiListUrl)
 	if err != nil {
 		return
 	}
 	defer res.Body.Close()
 	defer tf.Close()
-	p.AdvanceTo(40)
+	p.AdvanceTo(10)
 	b, err := io.ReadAll(res.Body)
 	lines := processBody(string(b))
 	count = len(lines)

@@ -56,10 +56,8 @@ func UpdateCmd() *cli.Command {
 	cmd.Action = func(c *cli.Context) error {
 		MaybePanic = createPanicFunc(c)
 		statuses := map[int]string{
-			10:  "Deleted old database...",
-			20:  "Created new database...",
-			30:  "Downloading vendor data...",
-			40:  "Processing vendor data...",
+			5:   "Downloading vendor data...",
+			10:  "Processing vendor data...",
 			99:  "Populating database...",
 			100: "Completed",
 		}
