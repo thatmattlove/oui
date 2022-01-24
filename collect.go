@@ -24,19 +24,22 @@ func processBody(b string) (l []string) {
 
 func DownloadFile(dir string, p *progress.Progress) (fn string, count int, err error) {
 	tf, err := os.CreateTemp(dir, "data-*.txt")
-	fn = tf.Name()
 	if err != nil {
 		return
 	}
+	defer tf.Close()
+	fn = tf.Name()
 	p.AdvanceTo(5)
 	res, err := http.Get(_ouiListUrl)
 	if err != nil {
 		return
 	}
 	defer res.Body.Close()
-	defer tf.Close()
 	p.AdvanceTo(10)
 	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return
+	}
 	lines := processBody(string(b))
 	count = len(lines)
 	for _, l := range lines {
