@@ -18,11 +18,34 @@ MAC Address CLI Toolkit
 
 ### macOS
 
-TODO
+```console
+$ brew tap thatmattlove/oui
+$ brew install oui
+```
 
 ### Linux
 
-TODO
+#### Debian/Ubuntu (APT)
+
+```console
+$ echo "deb [trusted=yes] https://repo.fury.io/thatmattlove/ /" > /etc/apt/sources.list.d/thatmattlove.fury.list
+$ sudo apt update
+$ sudo apt install oui
+```
+
+#### RHEL/CentOS (YUM)
+
+```console
+$ echo -e "[fury-thatmattlove]\nname=thatmattlove\nbaseurl=https://repo.fury.io/thatmattlove/\nenabled=1\ngpgcheck=0" > /etc/yum.repos.d/thatmattlove.fury.repo
+$ sudo yum update
+$ sudo yum install oui
+```
+
+#### Alpine (APK)
+
+```console
+$ sudo apk add oui --update-cache --repository https://repo.fury.io/thatmattlove/ --allow-untrusted
+```
 
 ### Windows
 
@@ -39,7 +62,7 @@ USAGE:
    oui [global options] command [command options] [arguments...]
 
 VERSION:
-   0.0.1
+   0.1.0
 
 
 COMMANDS:
@@ -48,6 +71,7 @@ COMMANDS:
    help, h          Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
+   --debug        Enable debugging (default: false)
    --help, -h     show help (default: false)
    --version, -v  print the version (default: false)
 ```
