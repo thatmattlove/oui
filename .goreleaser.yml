@@ -87,10 +87,10 @@ nfpms:
     overrides:
       deb:
         scripts:
-          postinstall: 'scripts/postinstall_debian.sh'
+          postinstall: 'scripts/postinstall-debian.sh'
       rpm:
         scripts:
-          postinstall: 'scripts/postinstall_rhel.sh'
+          postinstall: 'scripts/postinstall-rhel.sh'
 
 publishers:
   - name: fury.io
