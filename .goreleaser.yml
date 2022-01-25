@@ -68,8 +68,6 @@ brews:
       owner: thatmattlove
       name: homebrew-oui
       token: '{{ .Env.TAP_GITHUB_TOKEN }}'
-    post_install: |
-      system "oui", "update"
 
 nfpms:
   - id: packages
