@@ -3,7 +3,8 @@
 find_path() {
     local paths=($(rpm -ql oui | grep '/oui$'))
     local path=${paths[0]}
-    return path
+    echo $path
+    return 0
 }
 
 BIN=$(find_path)
