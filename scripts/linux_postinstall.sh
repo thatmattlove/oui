@@ -2,14 +2,10 @@
 
 BIN="$(which oui)"
 
-if [[ "$?" == "1" ]]; then
-    source ~/.profile
-    BIN="$(which oui)"
-    if [[ "$?" == "1" ]]; then
-        echo $'Unable to locate oui in $PATH. You\'ll need to run \'oui update\' once oui has been added to $PATH'
-        exit 0
-    fi
+if command -v oui >/dev/null; then
+    oui update
+    exit 0
 fi
 
-$BIN update
-exit 0
+echo $'Unable to run `oui update` automatically'
+exit 1

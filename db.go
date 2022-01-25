@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
@@ -11,81 +12,21 @@ import (
 )
 
 type OUIDB struct {
-	Directory  string
-	FileName   string
-	File       *os.File
+	Directory string
+	FileName  string
+	// File       *os.File
 	Connection *sql.DB
 	Version    string
 }
 
-func NewOUIDB() (ouidb *OUIDB, err error) {
-	ouidb = &OUIDB{}
-	err = ouidb.Delete()
-	if err != nil {
-		return
-	}
-	dir, fileName, err := ouidb.getFileName()
-	if err != nil {
-		return
-	}
-	ouidb.FileName = fileName
-	ouidb.Directory = dir
-	file, err := ouidb.getFile(dir, fileName)
-	if err != nil {
-		return
-	}
-	ouidb.File = file
-	conn, err := ouidb.getConnection()
-	if err != nil {
-		return
-	}
-	ouidb.Connection = conn
-	_, err = ouidb.getVersion()
-	if err != nil {
-		err = ouidb.createTable()
-		return
-	}
-	ver, err := ouidb.getVersion()
-	if err != nil {
-		return
-	}
-	ouidb.Version = ver
-	return
-}
-
-func (ouidb *OUIDB) getFileName() (d, f string, err error) {
+func (ouidb *OUIDB) createTable() (err error) {
 	if ouidb == nil {
 		err = fmt.Errorf("OUIDB is not initialized")
 		return
 	}
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return
-	}
-	d = fmt.Sprintf("%s/oui", dir)
-	f = d + "/oui.db"
-	return
-}
-
-func (ouidb *OUIDB) getFile(dn, fn string) (f *os.File, err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	if !pathExists(dn) {
-		err = os.MkdirAll(dn, os.ModePerm)
-		if err != nil {
-			return
-		}
-	}
-	if !pathExists(fn) {
-		f, err = os.Create(fn)
-		if err != nil {
-			return
-		}
-	}
-	f, err = os.Open(fn)
-	return
+	q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(64) NOT NULL, UNIQUE(prefix, length) ON CONFLICT REPLACE )", _tableVersion)
+	_, err = ouidb.Connection.Exec(q)
+	return err
 }
 
 func (ouidb *OUIDB) getConnection() (conn *sql.DB, err error) {
@@ -106,11 +47,7 @@ func (ouidb *OUIDB) getVersion() (v string, err error) {
 		return
 	}
 	q := fmt.Sprintf("SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%s'", _tableVersion)
-	conn, err := ouidb.getConnection()
-	if err != nil {
-		return
-	}
-	res, err := conn.Query(q)
+	res, err := ouidb.Connection.Query(q)
 	if err != nil {
 		return
 	}
@@ -122,16 +59,6 @@ func (ouidb *OUIDB) getVersion() (v string, err error) {
 		return
 	}
 	return
-}
-
-func (ouidb *OUIDB) createTable() (err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(64) NOT NULL, UNIQUE(prefix, length) ON CONFLICT REPLACE )", _tableVersion)
-	_, err = ouidb.Connection.Exec(q)
-	return err
 }
 
 func (ouidb *OUIDB) Delete() (err error) {
@@ -158,6 +85,101 @@ func (ouidb *OUIDB) Insert(d VendorDef) (res sql.Result, err error) {
 		return
 	}
 	res, err = s.Exec(d.Prefix, d.Length, d.Org)
+	return
+}
+
+func (ouidb *OUIDB) Populate(p *progress.Progress) (records int, err error) {
+	if ouidb == nil {
+		err = fmt.Errorf("OUIDB is not initialized")
+		return
+	}
+	p.Start()
+
+	f, n, err := DownloadFile(ouidb.Directory, p)
+	if err != nil {
+		return
+	}
+	total := n / 88
+	p.AdvanceTo(11)
+
+	defer ouidb.Connection.Close()
+
+	for def := range Collect(f, total, p) {
+		_, err = ouidb.Insert(def)
+		if err != nil {
+			return
+		}
+		records++
+	}
+	return
+}
+
+func getFileName() (fn string, err error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return
+	}
+	fn = filepath.Join(dir, "oui", "oui.db")
+	return
+}
+
+func scaffold() (dbf *os.File, dn string, err error) {
+	fn, err := getFileName()
+	if err != nil {
+		return
+	}
+	dn = filepath.Dir(fn)
+
+	err = os.RemoveAll(dn)
+	if err != nil {
+		return
+	}
+	err = os.MkdirAll(dn, 0755)
+	if err != nil {
+		return
+	}
+	dbf, err = os.Create(fn)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func NewOUIDB() (ouidb *OUIDB, err error) {
+	ouidb = &OUIDB{}
+
+	fn, err := getFileName()
+	if err != nil {
+		return
+	}
+
+	ouidb.FileName = fn
+	ouidb.Directory = filepath.Dir(fn)
+
+	if !pathExists(fn) {
+		_, _, err = scaffold()
+		if err != nil {
+			return
+		}
+	}
+
+	conn, err := ouidb.getConnection()
+	if err != nil {
+		return
+	}
+	ouidb.Connection = conn
+
+	_, err = ouidb.getVersion()
+	if err != nil {
+		err = ouidb.createTable()
+		return
+	}
+	ver, err := ouidb.getVersion()
+	if err != nil {
+		return
+	}
+	ouidb.Version = ver
+
 	return
 }
 
@@ -192,31 +214,5 @@ func Find(search string) (matches chan VendorDef) {
 		}
 		close(matches)
 	}()
-	return
-}
-
-func (ouidb *OUIDB) Populate(p *progress.Progress) (records int, err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	p.Start()
-
-	f, n, err := DownloadFile(ouidb.Directory, p)
-	if err != nil {
-		return
-	}
-	total := n / 88
-	p.AdvanceTo(11)
-
-	defer ouidb.Connection.Close()
-
-	for def := range Collect(f, total, p) {
-		_, err = ouidb.Insert(def)
-		if err != nil {
-			return
-		}
-		records++
-	}
 	return
 }
