@@ -30,6 +30,15 @@ func MainCmd(c *cli.Context) error {
 	MaybePanic = createPanicFunc(c)
 	search := c.Args().First()
 
+	db, err := NewOUIDB()
+	MaybePanic(err)
+	count, err := db.Count()
+	MaybePanic(err)
+	if count == 0 {
+		err = UpdateCmd().Run(c)
+		MaybePanic(err)
+	}
+
 	t := createTable(search)
 	fmt.Println(resultsTitle(search))
 

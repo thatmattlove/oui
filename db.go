@@ -12,9 +12,8 @@ import (
 )
 
 type OUIDB struct {
-	Directory string
-	FileName  string
-	// File       *os.File
+	Directory  string
+	FileName   string
 	Connection *sql.DB
 	Version    string
 }
@@ -114,8 +113,29 @@ func (ouidb *OUIDB) Populate(p *progress.Progress) (records int, err error) {
 	return
 }
 
+func (ouidb *OUIDB) Count() (count int64, err error) {
+	if ouidb == nil {
+		err = fmt.Errorf("OUIDB is not initialized")
+		return
+	}
+	q := fmt.Sprintf("SELECT COUNT(*) FROM %s", _tableVersion)
+	rows, err := ouidb.Connection.Query(q)
+	if err != nil {
+		return
+	}
+	defer ouidb.Connection.Close()
+	for rows.Next() {
+		err = rows.Scan(&count)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func getFileName() (fn string, err error) {
 	dir, err := os.UserConfigDir()
+
 	if err != nil {
 		return
 	}
@@ -172,7 +192,9 @@ func NewOUIDB() (ouidb *OUIDB, err error) {
 	_, err = ouidb.getVersion()
 	if err != nil {
 		err = ouidb.createTable()
-		return
+		if err != nil {
+			return
+		}
 	}
 	ver, err := ouidb.getVersion()
 	if err != nil {
