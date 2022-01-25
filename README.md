@@ -41,12 +41,6 @@ $ sudo yum update
 $ sudo yum install oui
 ```
 
-#### Alpine (APK)
-
-```console
-$ sudo apk add oui --update-cache --repository https://repo.fury.io/thatmattlove/ --allow-untrusted
-```
-
 ### Windows
 
 TODO
@@ -62,7 +56,7 @@ USAGE:
    oui [global options] command [command options] [arguments...]
 
 VERSION:
-   0.1.0
+   0.1.5
 
 
 COMMANDS:
