@@ -82,11 +82,15 @@ nfpms:
       darwin: macOS
       linux: linux
     formats:
-      - apk
       - deb
       - rpm
-    scripts:
-      postinstall: 'scripts/linux_postinstall.sh'
+    overrides:
+      deb:
+        scripts:
+          postinstall: 'scripts/postinstall_debian.sh'
+      rpm:
+        scripts:
+          postinstall: 'scripts/postinstall_rhel.sh'
 
 publishers:
   - name: fury.io
