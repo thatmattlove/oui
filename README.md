@@ -56,7 +56,7 @@ USAGE:
    oui [global options] command [command options] [arguments...]
 
 VERSION:
-   0.1.5
+   0.1.7
 
 
 COMMANDS:

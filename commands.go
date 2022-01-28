@@ -35,6 +35,8 @@ func MainCmd(c *cli.Context) error {
 	count, err := db.Count()
 	MaybePanic(err)
 	if count == 0 {
+		w := &text.Colors{text.FgYellow, text.Bold}
+		fmt.Println(w.Sprint("MAC Address Database has not been populated"))
 		err = UpdateCmd().Run(c)
 		MaybePanic(err)
 	}
