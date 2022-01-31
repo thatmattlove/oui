@@ -24,9 +24,6 @@ builds:
       - goos: freebsd
         goarch: arm
 
-release:
-  name_template: '{{.ProjectName}}-v{{.Version}}'
-
 changelog:
   sort: asc
   filters:
