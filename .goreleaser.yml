@@ -3,54 +3,23 @@ before:
     - go mod download
 
 builds:
-  - id: linux
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm
-      - arm64
-    goarm:
-      - '5'
-      - '6'
-      - '7'
-  - id: win
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - windows
-    goarch:
-      - amd64
-    goarm:
-      - '5'
-      - '6'
-      - '7'
-  - id: darwin
-    env:
+  - env:
       - CGO_ENABLED=0
     goos:
       - darwin
+      - linux
+      - freebsd
+      - windows
     goarch:
       - amd64
       - arm
       - arm64
-    goarm:
-      - '5'
-      - '6'
-      - '7'
-archives:
-  - replacements:
-      386: amd32
-      darwin: macOS
-      linux: linux
+    ignore:
+      - goos: windows
+        goarch: arm64
 
-checksum:
-  name_template: 'checksums.txt'
-
-snapshot:
-  name_template: '{{ .Tag }}-next'
+release:
+  name_template: '{{.ProjectName}}-v{{.Version}}'
 
 changelog:
   sort: asc
@@ -64,23 +33,20 @@ brews:
     homepage: https://github.com/thatmattlove/oui
     description: MAC Address CLI Toolkit
     license: BSD-3-Clause-Clear
+    commit_author:
+      name: Matt Love
+      email: matt@stunninglyclear.com
     tap:
       owner: thatmattlove
       name: homebrew-oui
       token: '{{ .Env.TAP_GITHUB_TOKEN }}'
 
 nfpms:
-  - id: packages
+  - id: linux_packages
     homepage: https://github.com/thatmattlove/oui
     maintainer: Matt Love <matt@stunninglyclear.com>
     description: MAC Address CLI Toolkit
     license: BSD-3-Clause-Clear
-    builds:
-      - linux
-    replacements:
-      386: amd32
-      darwin: macOS
-      linux: linux
     formats:
       - deb
       - rpm
@@ -95,6 +61,6 @@ nfpms:
 publishers:
   - name: fury.io
     ids:
-      - packages
+      - linux_packages
     dir: '{{ dir .ArtifactPath }}'
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/thatmattlove/
