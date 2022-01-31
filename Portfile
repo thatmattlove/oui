@@ -27,9 +27,11 @@ distname            ${name}_${version}_${os.platform}_${os.arch}64
 
 checksums               ${name}_${version}_darwin_amd64.tar.gz \
                         sha256  cd26e80c45569ce5aced00892f7226b84dbe25b4a372c74fcd45df5427264fba \
+                        rmd160  997ded2bbb555f3a2d7baedb5ba83c331607f08b \
                         size    5086101 \
                         ${name}_${version}_darwin_arm64.tar.gz \
                         sha256  45cf5925aa6d51d5edf8a1915f3d58b841fa97de3b0ed18273326080c959dc59 \
+                        rmd160 2a3f3c440182b70623cc510764bea709541ff93b \
                         size    4924616
 
 worksrcdir
