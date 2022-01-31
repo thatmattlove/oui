@@ -1,7 +1,11 @@
 # -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
 
 PortSystem          1.0
-PortGroup           golang 1.0
+PortGroup           github 1.0
+revision            0
+
+version             0.1.8
+name                oui
 
 homepage            https://github.com/thatmattlove/oui
 
@@ -16,12 +20,22 @@ maintainers         {stunninglyclear.com:matt @thatmattlove} openmaintainer
 
 license             BSD-3-Clause-Clear
 
-go.setup            github.com/thatmattlove/oui 0.1.8 v
+github.setup        thatmattlove ${name} ${version} v
+github.tarball_from releases
 
-github.tarball_from archive
+distname            ${name}_${version}_${os.platform}_${os.arch}64
 
-revision            0
+checksums               ${name}_${version}_darwin_amd64.tar.gz \
+                        sha256  cd26e80c45569ce5aced00892f7226b84dbe25b4a372c74fcd45df5427264fba \
+                        size    5086101 \
+                        ${name}_${version}_darwin_arm64.tar.gz \
+                        sha256  45cf5925aa6d51d5edf8a1915f3d58b841fa97de3b0ed18273326080c959dc59 \
+                        size    4924616
+
+worksrcdir
+use_configure       no
+build {}
 
 destroot {
-    xinstall -m 0755 ${worksrcpath}/${name} ${destroot}${prefix}/bin/
+    move ${workpath}/${name} ${destroot}${prefix}/bin/
 }
