@@ -18,9 +18,17 @@ MAC Address CLI Toolkit
 
 ### macOS
 
+#### Homebrew
+
 ```console
 $ brew tap thatmattlove/oui
 $ brew install oui
+```
+
+#### MacPorts
+
+```console
+$ sudo port install oui
 ```
 
 ### Linux
