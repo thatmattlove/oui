@@ -6,8 +6,8 @@
 MAC Address CLI Toolkit
 <br/>
 <br/>
-    <a href="https://github.com/thatmattlove/oui/actions?query=workflow%3Atest">
-        <img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/thatmattlove/oui/test?style=for-the-badge">
+    <a href="https://github.com/thatmattlove/oui/actions/workflows/test.yml">
+        <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/thatmattlove/oui/test.yml?style=for-the-badge">
     </a>
     <a href="https://github.com/thatmattlove/oui/releases">
         <img alt="GitHub release (latest SemVer)" src="https://img.shields.io/github/v/release/thatmattlove/oui?label=version&style=for-the-badge">
@@ -64,13 +64,14 @@ USAGE:
    oui [global options] command [command options] [arguments...]
 
 VERSION:
-   0.1.7
+   1.0.0
 
 
 COMMANDS:
-   update, u, up    Refresh the MAC address database
-   convert, c, con  Convert a MAC Address to other formats
-   help, h          Shows a list of commands or help for one command
+   update, u, up      Refresh the MAC address database
+   convert, c, con    Convert a MAC Address to other formats
+   entires, e, count  Show the number of MAC addresses in the database
+   help, h            Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
    --debug        Enable debugging (default: false)
@@ -85,11 +86,11 @@ $ oui F4:BD:9E:01:23:45
 
  F4:BD:9E:01:23:45 Results
 
-╭──────────────────────┬────────────────────┬─────────────────────────────────────╮
-│ Prefix               │ Organization       │ Range                               │
-├──────────────────────┼────────────────────┼─────────────────────────────────────┤
-│ f4:bd:9e:00:00:00/24 │ Cisco Systems, Inc │ f4:bd:9e:00:00:00-f4:bd:9e:ff:ff:ff │
-╰──────────────────────┴────────────────────┴─────────────────────────────────────╯
+╭──────────────────────┬────────────────────┬─────────────────────────────────────┬──────────╮
+│ Prefix               │ Organization       │ Range                               │ Registry │
+├──────────────────────┼────────────────────┼─────────────────────────────────────┼──────────┤
+│ f4:bd:9e:00:00:00/24 │ Cisco Systems, Inc │ f4:bd:9e:00:00:00-f4:bd:9e:ff:ff:ff │ MA-L     │
+╰──────────────────────┴────────────────────┴─────────────────────────────────────┴──────────╯
 
 ```
 
