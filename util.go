@@ -4,13 +4,10 @@ import (
 	"errors"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/Xuanwo/go-locale"
 	"github.com/hako/durafmt"
-	"golang.org/x/text/language"
 )
 
 func removeComments(str string) (c string) {
@@ -43,27 +40,6 @@ func pathExists(n string) bool {
 	return true
 }
 
-func deleteFile(f *os.File) (err error) {
-	n := f.Name()
-	if pathExists(n) {
-		err = os.Remove(n)
-	}
-	return
-}
-
 func timeSince(t time.Time) string {
 	return durafmt.Parse(time.Since(t)).LimitFirstN(1).String()
-}
-
-func setLocale() {
-	tag, err := locale.Detect()
-	if err != nil {
-		tag = language.English
-	}
-	_locale = tag
-}
-
-func containsStr(arr []string, search string) bool {
-	i := sort.SearchStrings(arr, search)
-	return i < len(arr) && arr[i] == search
 }

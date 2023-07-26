@@ -3,15 +3,17 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/Xuanwo/go-locale"
+	"golang.org/x/text/language"
 )
 
 func init() {
-	MaybePanic = func(err error) {
-		if err != nil {
-			panic(err)
-		}
+	tag, err := locale.Detect()
+	if err != nil {
+		tag = language.English
 	}
-	setLocale()
+	_locale = tag
 }
 
 func getArgs() []string {

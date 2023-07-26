@@ -13,7 +13,7 @@ import (
 )
 
 func resultsTitle(search string) string {
-	s := &text.Colors{text.FgCyan, text.Bold, text.Underline}
+	s := &text.Colors{text.FgHiCyan, text.Bold, text.Underline}
 	t := &text.Colors{text.Bold}
 	return fmt.Sprintf("\n %s%s\n", s.Sprint(search), t.Sprint(" Results"))
 }
@@ -21,40 +21,76 @@ func resultsTitle(search string) string {
 func createTable(search string) (t table.Writer) {
 	t = table.NewWriter()
 	t.SetStyle(*tableStyle)
-	h := &text.Colors{text.FgMagenta, text.Bold}
-	t.AppendHeader(table.Row{h.Sprint("Prefix"), h.Sprint("Organization"), h.Sprint("Range")})
+	h := &text.Colors{text.FgHiMagenta, text.Bold}
+	t.AppendHeader(table.Row{h.Sprint("Prefix"), h.Sprint("Organization"), h.Sprint("Range"), h.Sprint("Registry")})
 	return
 }
 
+func CountCmd() *cli.Command {
+	return &cli.Command{
+		Name:    "entires",
+		Usage:   "Show the number of MAC addresses in the database",
+		Aliases: []string{"e", "count"},
+		Action: func(c *cli.Context) error {
+			logger := NewLogger()
+			db, err := NewOUIDB()
+			if err != nil {
+				return err
+			}
+			count, err := db.Count()
+			if err != nil {
+				return err
+			}
+			logger.Info("MAC Address database has %s entries", count)
+			return nil
+		},
+	}
+}
+
 func MainCmd(c *cli.Context) error {
-	MaybePanic = createPanicFunc(c)
+	logger := NewLogger()
 	search := c.Args().First()
 
 	db, err := NewOUIDB()
-	MaybePanic(err)
+	if err != nil {
+		return err
+	}
 	count, err := db.Count()
-	MaybePanic(err)
+	if err != nil {
+		return err
+	}
 	if count == 0 {
-		w := &text.Colors{text.FgYellow, text.Bold}
-		fmt.Println(w.Sprint("MAC Address Database has not been populated"))
+		logger.Warn("MAC Address database has not been populated.")
 		err = UpdateCmd().Run(c)
-		MaybePanic(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	t := createTable(search)
 	fmt.Println(resultsTitle(search))
 
-	for result := range Find(search) {
-		_, mp, err := macaddr.ParseMACPrefix(result.PrefixString())
-		MaybePanic(err)
-		m := (&text.Colors{text.FgHiGreen, text.Bold}).Sprint(mp.MAC.String())
-		p := text.FgCyan.Sprintf("/%d", mp.PrefixLen())
-		rf := text.FgCyan.Sprint(mp.First())
-		rl := text.FgBlue.Sprint(mp.Last())
-		r := fmt.Sprintf("%s-%s", rf, rl)
-		t.AppendRow(table.Row{m + p, result.Org, r})
+	results, err := Find(search)
+	if err != nil {
+		return err
 	}
-	fmt.Println(t.Render())
+	if len(results) == 0 {
+		logger.Error("\n No results found\n\n")
+	} else {
+		for _, result := range results {
+			_, mp, err := macaddr.ParseMACPrefix(result.PrefixString())
+			if err != nil {
+				return err
+			}
+			m := (&text.Colors{text.FgHiGreen, text.Bold}).Sprint(mp.MAC.String())
+			p := text.FgHiCyan.Sprintf("/%d", mp.PrefixLen())
+			rf := text.FgHiCyan.Sprint(mp.First())
+			rl := text.FgHiRed.Sprint(mp.Last())
+			r := fmt.Sprintf("%s-%s", rf, rl)
+			t.AppendRow(table.Row{m + p, result.Org, r, result.Registry})
+		}
+		fmt.Println(t.Render())
+	}
 	return nil
 }
 
@@ -65,7 +101,6 @@ func UpdateCmd() *cli.Command {
 		Aliases: []string{"u", "up"},
 	}
 	cmd.Action = func(c *cli.Context) error {
-		MaybePanic = createPanicFunc(c)
 		statuses := map[int]string{
 			5:   "Downloading vendor data...",
 			10:  "Processing vendor data...",
@@ -75,7 +110,7 @@ func UpdateCmd() *cli.Command {
 
 		style := progress.BarChars{Completed: '█', Processing: '▌', Remaining: '░'}
 		b := (&text.Colors{text.Color(808080)}).Sprint("{@bar}")
-		title := (&text.Colors{text.FgCyan, text.Bold}).Sprint("\nUpdating MAC Address Database")
+		title := (&text.Colors{text.FgHiCyan, text.Bold}).Sprint("\nUpdating MAC Address Database")
 
 		fmt.Println(title)
 
@@ -85,17 +120,23 @@ func UpdateCmd() *cli.Command {
 			}).
 			AddWidget("bar", progress.BarWidget(50, style)).
 			AddWidget("message", progress.DynamicTextWidget(statuses))
+		p.Start()
 		ouidb, err := NewOUIDB()
-		MaybePanic(err)
+		if err != nil {
+			return err
+		}
+		p.AdvanceTo(3)
 		num, err := ouidb.Populate(p)
 		p.Finish()
-		MaybePanic(err)
+		if err != nil {
+			return err
+		}
 		message.NewPrinter(language.English)
 
 		dur := timeSince(p.StartedAt())
-		v := (&text.Colors{text.FgGreen, text.Bold}).Sprint(_tableVersion)
-		n := (&text.Colors{text.FgBlue, text.Bold}).Sprint(withLocale().Sprint(num))
-		d := (&text.Colors{text.FgRed, text.Bold}).Sprint(dur)
+		v := (&text.Colors{text.FgHiGreen, text.Bold}).Sprint(_tableVersion)
+		n := (&text.Colors{text.FgHiBlue, text.Bold}).Sprint(withLocale().Sprint(num))
+		d := (&text.Colors{text.FgHiRed, text.Bold}).Sprint(dur)
 		fmt.Printf("Updated MAC Address database (%s) with %s records in %s\n", v, n, d)
 		return nil
 	}
@@ -111,18 +152,20 @@ func ConvertCmd() *cli.Command {
 		ArgsUsage: "MAC Address to Convert",
 	}
 	cmd.Action = func(c *cli.Context) error {
-		MaybePanic = createPanicFunc(c)
 		i := c.Args().First()
-		f := Convert(i)
+		f, err := Convert(i)
+		if err != nil {
+			return err
+		}
 		t := table.NewWriter()
 		t.SetStyle(*tableStyle)
-		h := (&text.Colors{text.FgMagenta, text.Bold})
+		h := (&text.Colors{text.FgHiMagenta, text.Bold})
 		t.AppendRow(table.Row{h.Sprint("Hexadecimal"), f.Hex})
 		t.AppendRow(table.Row{h.Sprint("Dotted"), f.Dotted})
 		t.AppendRow(table.Row{h.Sprint("Dashed"), f.Dashed})
 		t.AppendRow(table.Row{h.Sprint("Integer"), f.Int})
 		t.AppendRow(table.Row{h.Sprint("Bytes"), f.Bytes})
-		m := (&text.Colors{text.FgCyan, text.Bold, text.Underline}).Sprintf("%s\n", i)
+		m := (&text.Colors{text.FgHiCyan, text.Bold, text.Underline}).Sprintf("%s\n", i)
 		fmt.Println("\n " + m)
 		fmt.Println(t.Render())
 		return nil

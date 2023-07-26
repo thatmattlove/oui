@@ -1,6 +1,6 @@
 module github.com/thatmattlove/oui
 
-go 1.17
+go 1.20
 
 require (
 	github.com/Xuanwo/go-locale v1.1.0

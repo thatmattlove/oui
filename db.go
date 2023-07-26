@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
@@ -16,121 +17,6 @@ type OUIDB struct {
 	FileName   string
 	Connection *sql.DB
 	Version    string
-}
-
-func (ouidb *OUIDB) createTable() (err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(64) NOT NULL, UNIQUE(prefix, length) ON CONFLICT REPLACE )", _tableVersion)
-	_, err = ouidb.Connection.Exec(q)
-	return err
-}
-
-func (ouidb *OUIDB) getConnection() (conn *sql.DB, err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	conn, err = sql.Open("sqlite", ouidb.FileName)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (ouidb *OUIDB) getVersion() (v string, err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	q := fmt.Sprintf("SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%s'", _tableVersion)
-	res, err := ouidb.Connection.Query(q)
-	if err != nil {
-		return
-	}
-	for res.Next() {
-		res.Scan(&v)
-	}
-	if v == "" {
-		err = fmt.Errorf(_updateMsg, _tableVersion)
-		return
-	}
-	return
-}
-
-func (ouidb *OUIDB) Delete() (err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	if pathExists(ouidb.FileName) {
-		err = os.Remove(ouidb.FileName)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (ouidb *OUIDB) Insert(d VendorDef) (res sql.Result, err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	s, err := ouidb.Connection.Prepare(fmt.Sprintf("INSERT INTO %s(prefix, length, org) values(?,?,?)", _tableVersion))
-	if err != nil {
-		return
-	}
-	res, err = s.Exec(d.Prefix, d.Length, d.Org)
-	return
-}
-
-func (ouidb *OUIDB) Populate(p *progress.Progress) (records int, err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	p.Start()
-
-	f, n, err := DownloadFile(ouidb.Directory, p)
-	if err != nil {
-		return
-	}
-	total := n / 88
-	p.AdvanceTo(11)
-
-	defer ouidb.Connection.Close()
-
-	for def := range Collect(f, total, p) {
-		_, err = ouidb.Insert(def)
-		if err != nil {
-			return
-		}
-		records++
-	}
-	return
-}
-
-func (ouidb *OUIDB) Count() (count int64, err error) {
-	if ouidb == nil {
-		err = fmt.Errorf("OUIDB is not initialized")
-		return
-	}
-	q := fmt.Sprintf("SELECT COUNT(*) FROM %s", _tableVersion)
-	rows, err := ouidb.Connection.Query(q)
-	if err != nil {
-		return
-	}
-	defer ouidb.Connection.Close()
-	for rows.Next() {
-		err = rows.Scan(&count)
-		if err != nil {
-			return
-		}
-	}
-	return
 }
 
 func getFileName() (fn string, err error) {
@@ -158,6 +44,7 @@ func scaffold() (dbf *os.File, dn string, err error) {
 	if err != nil {
 		return
 	}
+	defer dbf.Close()
 	dbf, err = os.Create(fn)
 	if err != nil {
 		return
@@ -165,76 +52,190 @@ func scaffold() (dbf *os.File, dn string, err error) {
 	return
 }
 
-func NewOUIDB() (ouidb *OUIDB, err error) {
-	ouidb = &OUIDB{}
-
-	fn, err := getFileName()
+func (ouidb *OUIDB) GetVersion() (v string, err error) {
+	q := fmt.Sprintf("SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%s'", _tableVersion)
+	res, err := ouidb.Connection.Query(q)
 	if err != nil {
 		return
 	}
-
-	ouidb.FileName = fn
-	ouidb.Directory = filepath.Dir(fn)
-
-	if !pathExists(fn) {
-		_, _, err = scaffold()
-		if err != nil {
-			return
-		}
+	for res.Next() {
+		res.Scan(&v)
 	}
-
-	conn, err := ouidb.getConnection()
-	if err != nil {
+	if v == "" {
+		err = fmt.Errorf(_updateMsg, _tableVersion)
 		return
 	}
-	ouidb.Connection = conn
-
-	_, err = ouidb.getVersion()
-	if err != nil {
-		err = ouidb.createTable()
-		if err != nil {
-			return
-		}
-	}
-	ver, err := ouidb.getVersion()
-	if err != nil {
-		return
-	}
-	ouidb.Version = ver
-
 	return
 }
 
-func Find(search string) (matches chan VendorDef) {
-	matches = make(chan VendorDef)
-	ouidb, err := NewOUIDB()
-	MaybePanic(err)
+func (ouidb *OUIDB) Clear() (err error) {
+	err = ouidb.Connection.Ping()
+	if err != nil {
+		return
+	}
+	query, err := ouidb.Connection.Prepare(fmt.Sprintf("DELETE FROM %s", ouidb.Version))
+	if err != nil {
+		return
+	}
+	_, err = query.Exec()
+	return
+}
 
-	go func() {
-		mac, err := macaddr.ParseMACAddress(search)
-		MaybePanic(err)
-		q := fmt.Sprintf("SELECT prefix,length,org FROM %s WHERE prefix LIKE '%s%%'", _tableVersion, mac.OUI())
-		rows, err := ouidb.Connection.Query(q)
-		MaybePanic(err)
+func (ouidb *OUIDB) Insert(d *VendorDef) (res sql.Result, err error) {
+	s, err := ouidb.Connection.Prepare(fmt.Sprintf("INSERT INTO %s(prefix, length, org, registry) values(?,?,?,?)", _tableVersion))
+	if err != nil {
+		return
+	}
+	res, err = s.Exec(d.Prefix, d.Length, d.Org, d.Registry)
+	return
+}
 
-		defer rows.Close()
-		defer ouidb.Connection.Close()
-
-		for rows.Next() {
-			var prefix string
-			var length int
-			var org string
-			err := rows.Scan(&prefix, &length, &org)
-			MaybePanic(err)
-			def := VendorDef{Prefix: prefix, Length: length, Org: org}
-			_, mp, err := macaddr.ParseMACPrefix(def.PrefixString())
-			MaybePanic(err)
-			_, failure := mp.Match(search)
-			if failure == nil {
-				matches <- def
-			}
+func (ouidb *OUIDB) Populate(p *progress.Progress) (records int64, err error) {
+	p.AdvanceTo(11)
+	defer ouidb.Connection.Close()
+	err = ouidb.Clear()
+	if err != nil {
+		return
+	}
+	for _, def := range CollectAll(p, NewLogger()) {
+		_, err = ouidb.Insert(def)
+		if err != nil {
+			return
 		}
-		close(matches)
-	}()
+		records++
+	}
+	return
+}
+
+func (ouidb *OUIDB) Count() (count int64, err error) {
+	q := fmt.Sprintf("SELECT COUNT(*) FROM %s", ouidb.Version)
+	rows, err := ouidb.Connection.Query(q)
+	if err != nil {
+		return
+	}
+	defer ouidb.Connection.Close()
+	var countS string
+	for rows.Next() {
+		err = rows.Scan(&countS)
+		if err != nil {
+			return
+		}
+	}
+	count, err = strconv.ParseInt(countS, 10, 64)
+	return
+}
+
+func Find(search string) (matches []*VendorDef, err error) {
+	ouidb, err := NewOUIDB()
+	if err != nil {
+		return matches, err
+	}
+
+	mac, err := macaddr.ParseMACAddress(search)
+	if err != nil {
+		return matches, err
+	}
+	q := fmt.Sprintf("SELECT prefix,length,org,registry FROM %s WHERE prefix LIKE '%s%%'", ouidb.Version, mac.OUI())
+	rows, err := ouidb.Connection.Query(q)
+	if err != nil {
+		return matches, err
+	}
+
+	defer rows.Close()
+	defer ouidb.Connection.Close()
+
+	for rows.Next() {
+		var prefix string
+		var length int
+		var org string
+		var reg string
+		err = rows.Scan(&prefix, &length, &org, &reg)
+		if err != nil {
+			return matches, err
+		}
+		def := &VendorDef{Prefix: prefix, Length: length, Org: org, Registry: reg}
+		_, mp, err := macaddr.ParseMACPrefix(def.PrefixString())
+		if err != nil {
+			return matches, err
+		}
+		_, failure := mp.Match(search)
+		if failure == nil {
+			matches = append(matches, def)
+		}
+	}
+	return matches, nil
+}
+
+func (ouidb *OUIDB) Close() error {
+	return ouidb.Connection.Close()
+}
+
+func tableExists(conn *sql.DB, ver string) (bool, error) {
+	q, err := conn.Prepare(fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", ver))
+	if err != nil {
+		return false, err
+	}
+	rs, err := q.Query()
+	if err != nil {
+		return false, err
+	}
+	defer rs.Close()
+
+	var table string
+	rs.Next()
+	rs.Scan(&table)
+	if table != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func NewOUIDB() (ouidb *OUIDB, err error) {
+	fileName, err := getFileName()
+	if err != nil {
+		return nil, err
+	}
+
+	var conn *sql.DB
+
+	if !pathExists(fileName) {
+		_, _, err = scaffold()
+		if err != nil {
+			return nil, err
+		}
+		conn, err = sql.Open("sqlite", fileName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		conn, err = sql.Open("sqlite", fileName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = conn.Ping()
+	if err != nil {
+		return
+	}
+
+	exists, err := tableExists(conn, _tableVersion)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(64) NOT NULL, `registry` VARCHAR(32) NOT NULL , UNIQUE(prefix, length, registry) ON CONFLICT REPLACE )", _tableVersion)
+		_, err = conn.Exec(q)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	ouidb = &OUIDB{
+		FileName:   fileName,
+		Directory:  filepath.Dir(fileName),
+		Connection: conn,
+		Version:    _tableVersion,
+	}
 	return
 }

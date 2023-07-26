@@ -7,13 +7,10 @@ import (
 )
 
 const (
-	_ouiListUrl   string = "https://gitlab.com/wireshark/wireshark/-/raw/master/manuf"
-	_tableVersion string = "v0"
+	_tableVersion string = "v1"
 	_nilStr       string = "<nil>"
 	_updateMsg    string = "table '%s' is missing from the database"
 )
-
-var MaybePanic func(err error)
 
 var _locale language.Tag
 

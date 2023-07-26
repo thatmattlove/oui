@@ -14,10 +14,12 @@ type Formats struct {
 	Bytes  string
 }
 
-func Convert(i string) (fmts *Formats) {
+func Convert(i string) (fmts *Formats, err error) {
 	i = strings.Split(i, "/")[0]
 	mac, err := macaddr.ParseMACAddress(i)
-	MaybePanic(err)
+	if err != nil {
+		return nil, err
+	}
 	fmts = &Formats{
 		Hex:    mac.String(),
 		Dotted: mac.Dots(),
