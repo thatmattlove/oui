@@ -1,4 +1,4 @@
-package main
+package oui
 
 type VendorDef struct {
 	Prefix   string
@@ -9,7 +9,7 @@ type VendorDef struct {
 
 func (v *VendorDef) PrefixString() string {
 	if v == nil {
-		return _nilStr
+		return "<nil>"
 	}
 	return v.Prefix
 }

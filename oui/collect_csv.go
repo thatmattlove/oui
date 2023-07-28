@@ -1,4 +1,4 @@
-package main
+package oui
 
 import (
 	"encoding/csv"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
+	"github.com/thatmattlove/oui/internal/logger"
 )
 
 func DownloadCSV(registry *Registry) (fileName string, err error) {
@@ -33,7 +34,7 @@ func DownloadCSV(registry *Registry) (fileName string, err error) {
 	return
 }
 
-func ReadCSV(registry *Registry, fileName string, logger *Logger) (results []*VendorDef) {
+func ReadCSV(registry *Registry, fileName string, logger *logger.Logger) (results []*VendorDef) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		logger.Err(err)
@@ -88,7 +89,7 @@ func ReadCSV(registry *Registry, fileName string, logger *Logger) (results []*Ve
 	return
 }
 
-func CollectAll(p *progress.Progress, logger *Logger) (results []*VendorDef) {
+func CollectAll(p *progress.Progress, logger *logger.Logger) (results []*VendorDef) {
 	registries := Registries()
 	for _, reg := range registries {
 		p.Advance(uint(88 / len(registries)))

@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"github.com/hako/durafmt"
 )
 
-func removeComments(str string) (c string) {
+func RemoveComments(str string) (c string) {
 	has := regexp.MustCompile(`^[^\\]*#.*$`)
 	re := regexp.MustCompile(`^([^\\#]+)|(#.*)$`)
 	if has.MatchString(str) {
@@ -22,7 +22,7 @@ func removeComments(str string) (c string) {
 	return strings.TrimSpace(c)
 }
 
-func splitTabs(i string) []string {
+func SplitTabs(i string) []string {
 	p := regexp.MustCompile(`\t+`)
 	var r []string
 	for _, e := range p.Split(i, -1) {
@@ -33,13 +33,13 @@ func splitTabs(i string) []string {
 	return r
 }
 
-func pathExists(n string) bool {
+func PathExists(n string) bool {
 	if _, err := os.Stat(n); errors.Is(err, os.ErrNotExist) {
 		return false
 	}
 	return true
 }
 
-func timeSince(t time.Time) string {
+func TimeSince(t time.Time) string {
 	return durafmt.Parse(time.Since(t)).LimitFirstN(1).String()
 }

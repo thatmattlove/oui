@@ -1,10 +1,12 @@
-package main
+package cmd
 
 import (
 	"fmt"
 
+	"github.com/Xuanwo/go-locale"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
 
@@ -19,7 +21,11 @@ var tableStyle = &table.Style{
 var debugFlag *cli.BoolFlag = &cli.BoolFlag{Name: "debug", Usage: "Enable debugging", Value: false}
 
 func withLocale() (p *message.Printer) {
-	p = message.NewPrinter(_locale)
+	tag, err := locale.Detect()
+	if err != nil {
+		tag = language.English
+	}
+	p = message.NewPrinter(tag)
 	return
 }
 
@@ -27,7 +33,7 @@ func versionPrinter(c *cli.Context) {
 	fmt.Println(c.App.Version)
 }
 
-func CLI() *cli.App {
+func New(version string) *cli.App {
 	subs := []*cli.Command{UpdateCmd(), ConvertCmd(), CountCmd()}
 
 	flags := []cli.Flag{debugFlag}
@@ -40,7 +46,7 @@ func CLI() *cli.App {
 		Action:      MainCmd,
 		Commands:    subs,
 		Flags:       flags,
-		Version:     Version,
+		Version:     version,
 		HideVersion: false,
 	}
 

@@ -1,12 +1,14 @@
-package main
+package logger_test
 
 import (
 	"io"
 	"testing"
+
+	"github.com/thatmattlove/oui/internal/logger"
 )
 
 func Test_Logger(t *testing.T) {
-	log := NewLogger()
+	log := logger.New()
 	log.Success("test success")
 	log.Success("test success formatting: %s", "this should be bold")
 	log.Info("test info")

@@ -4,17 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Xuanwo/go-locale"
-	"golang.org/x/text/language"
+	"github.com/thatmattlove/oui/cmd"
 )
-
-func init() {
-	tag, err := locale.Detect()
-	if err != nil {
-		tag = language.English
-	}
-	_locale = tag
-}
 
 func getArgs() []string {
 	args := os.Args
@@ -26,7 +17,7 @@ func getArgs() []string {
 
 func main() {
 	args := getArgs()
-	err := CLI().Run(args)
+	err := cmd.New(TABLE_VERSION).Run(args)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

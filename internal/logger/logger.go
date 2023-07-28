@@ -1,10 +1,12 @@
-package main
+package logger
 
 import (
 	"fmt"
 	"os"
 
+	"github.com/Xuanwo/go-locale"
 	"github.com/jedib0t/go-pretty/text"
+	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
 
@@ -13,10 +15,14 @@ type Logger struct {
 	Writer *message.Printer
 }
 
-func NewLogger() *Logger {
+func New() *Logger {
+	tag, err := locale.Detect()
+	if err != nil {
+		tag = language.English
+	}
 	logger := &Logger{
 		Accent: &text.Colors{text.Bold, text.Underline},
-		Writer: message.NewPrinter(_locale),
+		Writer: message.NewPrinter(tag),
 	}
 	return logger
 }

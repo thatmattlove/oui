@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"fmt"
@@ -7,6 +7,9 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 	"github.com/thatmattlove/go-macaddr"
+	"github.com/thatmattlove/oui/internal/logger"
+	"github.com/thatmattlove/oui/internal/util"
+	"github.com/thatmattlove/oui/oui"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -32,8 +35,8 @@ func CountCmd() *cli.Command {
 		Usage:   "Show the number of MAC addresses in the database",
 		Aliases: []string{"e", "count"},
 		Action: func(c *cli.Context) error {
-			logger := NewLogger()
-			db, err := NewOUIDB()
+			logger := logger.New()
+			db, err := oui.New(c.App.Version)
 			if err != nil {
 				return err
 			}
@@ -48,34 +51,36 @@ func CountCmd() *cli.Command {
 }
 
 func MainCmd(c *cli.Context) error {
-	logger := NewLogger()
+	log := logger.New()
 	search := c.Args().First()
 
-	db, err := NewOUIDB()
+	db, err := oui.New(c.App.Version)
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 	count, err := db.Count()
 	if err != nil {
 		return err
 	}
 	if count == 0 {
-		logger.Warn("MAC Address database has not been populated.")
+		log.Warn("MAC Address database has not been populated.")
 		err = UpdateCmd().Run(c)
 		if err != nil {
 			return err
 		}
 	}
 
-	t := createTable(search)
-	fmt.Println(resultsTitle(search))
-
-	results, err := Find(search)
+	results, err := db.Find(search)
 	if err != nil {
 		return err
 	}
+
+	t := createTable(search)
+	fmt.Println(resultsTitle(search))
+
 	if len(results) == 0 {
-		logger.Error("\n No results found\n\n")
+		log.Error("\n No results found\n\n")
 	} else {
 		for _, result := range results {
 			_, mp, err := macaddr.ParseMACPrefix(result.PrefixString())
@@ -121,20 +126,21 @@ func UpdateCmd() *cli.Command {
 			AddWidget("bar", progress.BarWidget(50, style)).
 			AddWidget("message", progress.DynamicTextWidget(statuses))
 		p.Start()
-		ouidb, err := NewOUIDB()
+		db, err := oui.New(c.App.Version)
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		p.AdvanceTo(3)
-		num, err := ouidb.Populate(p)
+		num, err := db.Populate(p)
 		p.Finish()
 		if err != nil {
 			return err
 		}
 		message.NewPrinter(language.English)
 
-		dur := timeSince(p.StartedAt())
-		v := (&text.Colors{text.FgHiGreen, text.Bold}).Sprint(_tableVersion)
+		dur := util.TimeSince(p.StartedAt())
+		v := (&text.Colors{text.FgHiGreen, text.Bold}).Sprint(c.App.Version)
 		n := (&text.Colors{text.FgHiBlue, text.Bold}).Sprint(withLocale().Sprint(num))
 		d := (&text.Colors{text.FgHiRed, text.Bold}).Sprint(dur)
 		fmt.Printf("Updated MAC Address database (%s) with %s records in %s\n", v, n, d)
@@ -153,7 +159,7 @@ func ConvertCmd() *cli.Command {
 	}
 	cmd.Action = func(c *cli.Context) error {
 		i := c.Args().First()
-		f, err := Convert(i)
+		f, err := oui.Convert(i)
 		if err != nil {
 			return err
 		}

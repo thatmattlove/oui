@@ -1,4 +1,4 @@
-package main
+package oui
 
 import (
 	"database/sql"
@@ -9,6 +9,8 @@ import (
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
+	"github.com/thatmattlove/oui/internal/logger"
+	"github.com/thatmattlove/oui/internal/util"
 	_ "modernc.org/sqlite"
 )
 
@@ -52,22 +54,6 @@ func scaffold() (dbf *os.File, dn string, err error) {
 	return
 }
 
-func (ouidb *OUIDB) GetVersion() (v string, err error) {
-	q := fmt.Sprintf("SELECT name FROM sqlite_schema WHERE type='table' AND name LIKE '%s'", _tableVersion)
-	res, err := ouidb.Connection.Query(q)
-	if err != nil {
-		return
-	}
-	for res.Next() {
-		res.Scan(&v)
-	}
-	if v == "" {
-		err = fmt.Errorf(_updateMsg, _tableVersion)
-		return
-	}
-	return
-}
-
 func (ouidb *OUIDB) Clear() (err error) {
 	err = ouidb.Connection.Ping()
 	if err != nil {
@@ -82,7 +68,7 @@ func (ouidb *OUIDB) Clear() (err error) {
 }
 
 func (ouidb *OUIDB) Insert(d *VendorDef) (res sql.Result, err error) {
-	s, err := ouidb.Connection.Prepare(fmt.Sprintf("INSERT INTO %s(prefix, length, org, registry) values(?,?,?,?)", _tableVersion))
+	s, err := ouidb.Connection.Prepare(fmt.Sprintf("INSERT INTO %s(prefix, length, org, registry) values(?,?,?,?)", ouidb.Version))
 	if err != nil {
 		return
 	}
@@ -92,12 +78,11 @@ func (ouidb *OUIDB) Insert(d *VendorDef) (res sql.Result, err error) {
 
 func (ouidb *OUIDB) Populate(p *progress.Progress) (records int64, err error) {
 	p.AdvanceTo(11)
-	defer ouidb.Connection.Close()
 	err = ouidb.Clear()
 	if err != nil {
 		return
 	}
-	for _, def := range CollectAll(p, NewLogger()) {
+	for _, def := range CollectAll(p, logger.New()) {
 		_, err = ouidb.Insert(def)
 		if err != nil {
 			return
@@ -113,7 +98,6 @@ func (ouidb *OUIDB) Count() (count int64, err error) {
 	if err != nil {
 		return
 	}
-	defer ouidb.Connection.Close()
 	var countS string
 	for rows.Next() {
 		err = rows.Scan(&countS)
@@ -125,12 +109,7 @@ func (ouidb *OUIDB) Count() (count int64, err error) {
 	return
 }
 
-func Find(search string) (matches []*VendorDef, err error) {
-	ouidb, err := NewOUIDB()
-	if err != nil {
-		return matches, err
-	}
-
+func (ouidb *OUIDB) Find(search string) (matches []*VendorDef, err error) {
 	mac, err := macaddr.ParseMACAddress(search)
 	if err != nil {
 		return matches, err
@@ -142,7 +121,6 @@ func Find(search string) (matches []*VendorDef, err error) {
 	}
 
 	defer rows.Close()
-	defer ouidb.Connection.Close()
 
 	for rows.Next() {
 		var prefix string
@@ -190,7 +168,7 @@ func tableExists(conn *sql.DB, ver string) (bool, error) {
 	return false, nil
 }
 
-func NewOUIDB() (ouidb *OUIDB, err error) {
+func New(version string) (ouidb *OUIDB, err error) {
 	fileName, err := getFileName()
 	if err != nil {
 		return nil, err
@@ -198,7 +176,7 @@ func NewOUIDB() (ouidb *OUIDB, err error) {
 
 	var conn *sql.DB
 
-	if !pathExists(fileName) {
+	if !util.PathExists(fileName) {
 		_, _, err = scaffold()
 		if err != nil {
 			return nil, err
@@ -219,12 +197,12 @@ func NewOUIDB() (ouidb *OUIDB, err error) {
 		return
 	}
 
-	exists, err := tableExists(conn, _tableVersion)
+	exists, err := tableExists(conn, version)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(64) NOT NULL, `registry` VARCHAR(32) NOT NULL , UNIQUE(prefix, length, registry) ON CONFLICT REPLACE )", _tableVersion)
+		q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(64) NOT NULL, `registry` VARCHAR(32) NOT NULL , UNIQUE(prefix, length, registry) ON CONFLICT REPLACE )", version)
 		_, err = conn.Exec(q)
 		if err != nil {
 			return nil, err
@@ -235,7 +213,7 @@ func NewOUIDB() (ouidb *OUIDB, err error) {
 		FileName:   fileName,
 		Directory:  filepath.Dir(fileName),
 		Connection: conn,
-		Version:    _tableVersion,
+		Version:    version,
 	}
 	return
 }
