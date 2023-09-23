@@ -13,3 +13,16 @@ func (v *VendorDef) PrefixString() string {
 	}
 	return v.Prefix
 }
+
+type LoggerType interface {
+	Success(s string, f ...interface{})
+	Info(s string, f ...interface{})
+	Warn(s string, f ...interface{})
+	Error(s string, f ...interface{})
+	Err(err error, strs ...string)
+}
+
+const (
+	dialectSqlite int = iota
+	dialectPsql
+)

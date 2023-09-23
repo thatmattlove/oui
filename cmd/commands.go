@@ -36,7 +36,11 @@ func CountCmd() *cli.Command {
 		Aliases: []string{"e", "count"},
 		Action: func(c *cli.Context) error {
 			logger := logger.New()
-			db, err := oui.New(c.App.Version)
+			sqlite, err := oui.CreateSQLiteOption()
+			if err != nil {
+				return err
+			}
+			db, err := oui.New(oui.WithVersion(c.App.Version), oui.WithLogging(logger), sqlite)
 			if err != nil {
 				return err
 			}
@@ -54,7 +58,12 @@ func MainCmd(c *cli.Context) error {
 	log := logger.New()
 	search := c.Args().First()
 
-	db, err := oui.New(c.App.Version)
+	sqlite, err := oui.CreateSQLiteOption()
+	if err != nil {
+		return err
+	}
+
+	db, err := oui.New(oui.WithVersion(c.App.Version), oui.WithLogging(log), sqlite)
 	if err != nil {
 		return err
 	}
@@ -126,13 +135,17 @@ func UpdateCmd() *cli.Command {
 			AddWidget("bar", progress.BarWidget(50, style)).
 			AddWidget("message", progress.DynamicTextWidget(statuses))
 		p.Start()
-		db, err := oui.New(c.App.Version)
+		sqlite, err := oui.CreateSQLiteOption()
+		if err != nil {
+			return err
+		}
+		db, err := oui.New(oui.WithVersion(c.App.Version), oui.WithLogging(logger.New()), oui.WithProgress(p), sqlite)
 		if err != nil {
 			return err
 		}
 		defer db.Close()
 		p.AdvanceTo(3)
-		num, err := db.Populate(p)
+		num, err := db.Populate()
 		p.Finish()
 		if err != nil {
 			return err

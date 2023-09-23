@@ -2,6 +2,7 @@ package oui
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
-	"github.com/thatmattlove/oui/internal/logger"
 )
 
 func DownloadCSV(registry *Registry) (fileName string, err error) {
@@ -34,10 +34,12 @@ func DownloadCSV(registry *Registry) (fileName string, err error) {
 	return
 }
 
-func ReadCSV(registry *Registry, fileName string, logger *logger.Logger) (results []*VendorDef) {
+func ReadCSV(registry *Registry, fileName string, logger LoggerType) (results []*VendorDef) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		logger.Err(err)
+		if logger != nil {
+			logger.Err(err)
+		}
 		panic(err)
 	}
 	defer file.Close()
@@ -49,10 +51,14 @@ func ReadCSV(registry *Registry, fileName string, logger *logger.Logger) (result
 		row, err = reader.Read()
 		if err == io.EOF {
 			// Exit loop when file is done being read.
-			logger.Success("finished parsing vendors from %s registry", registry.Name)
+			if logger != nil {
+				logger.Success("finished parsing vendors from %s registry", registry.Name)
+			}
 			break
 		} else if err != nil {
-			logger.Err(err, "failed to read file '%s'", registry.FileName())
+			if logger != nil {
+				logger.Err(err, "failed to read file '%s'", registry.FileName())
+			}
 		}
 		if place == 0 {
 			// Ignore header row.
@@ -62,7 +68,9 @@ func ReadCSV(registry *Registry, fileName string, logger *logger.Logger) (result
 		place++
 		if len(row) < 3 {
 			// Ignore rows that don't conform to expected structure.
-			logger.Warn("skipping row %s", row)
+			if logger != nil {
+				logger.Warn("skipping row %s", row)
+			}
 			continue
 		}
 		assignment := strings.TrimSpace(row[1])
@@ -73,7 +81,9 @@ func ReadCSV(registry *Registry, fileName string, logger *logger.Logger) (result
 		org := strings.TrimSpace(organization)
 		base, mp, err := macaddr.ParseMACPrefix(assignment)
 		if err != nil {
-			logger.Err(err, "failed to parse OUI assignment")
+			if logger != nil {
+				logger.Err(err, "failed to parse OUI assignment")
+			}
 			continue
 		}
 		prefixLen := mp.PrefixLen()
@@ -89,15 +99,23 @@ func ReadCSV(registry *Registry, fileName string, logger *logger.Logger) (result
 	return
 }
 
-func CollectAll(p *progress.Progress, logger *logger.Logger) (results []*VendorDef) {
+func CollectAll(p *progress.Progress, logger LoggerType) ([]*VendorDef, error) {
 	registries := Registries()
+	defs := make([]*VendorDef, 0)
+	errs := make([]error, 0)
 	for _, reg := range registries {
-		p.Advance(uint(88 / len(registries)))
+		if p != nil {
+			p.Advance(uint(88 / len(registries)))
+		}
 		fileName, err := DownloadCSV(reg)
 		if err != nil {
-			logger.Err(err, "failed to download file '%s'", reg.FileName())
+			errs = append(errs, err)
+			if logger != nil {
+				logger.Err(err, "failed to download file '%s'", reg.FileName())
+			}
 		}
-		results = append(results, ReadCSV(reg, fileName, logger)...)
+		defs = append(defs, ReadCSV(reg, fileName, logger)...)
 	}
-	return
+	err := errors.Join(errs...)
+	return defs, err
 }

@@ -3,55 +3,40 @@ package oui
 import (
 	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
-	"github.com/thatmattlove/oui/internal/logger"
-	"github.com/thatmattlove/oui/internal/util"
-	_ "modernc.org/sqlite"
 )
 
 type OUIDB struct {
-	Directory  string
-	FileName   string
-	Connection *sql.DB
-	Version    string
+	Connection  *sql.DB
+	Version     string
+	Progress    *progress.Progress
+	Logger      *LoggerType
+	useLogging  bool
+	useProgress bool
+	dialect     int
 }
 
-func getFileName() (fn string, err error) {
-	dir, err := os.UserConfigDir()
+func tableExists(dialect int, conn *sql.DB, ver string) (bool, error) {
+	q, err := conn.Prepare(fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", ver))
+	if err != nil {
+		return false, err
+	}
+	rs, err := q.Query()
+	if err != nil {
+		return false, nil
+	}
+	defer rs.Close()
 
-	if err != nil {
-		return
+	var table string
+	rs.Next()
+	rs.Scan(&table)
+	if table != "" {
+		return true, nil
 	}
-	fn = filepath.Join(dir, "oui", "oui.db")
-	return
-}
-
-func scaffold() (dbf *os.File, dn string, err error) {
-	fn, err := getFileName()
-	if err != nil {
-		return
-	}
-	dn = filepath.Dir(fn)
-
-	err = os.RemoveAll(dn)
-	if err != nil {
-		return
-	}
-	err = os.MkdirAll(dn, 0755)
-	if err != nil {
-		return
-	}
-	defer dbf.Close()
-	dbf, err = os.Create(fn)
-	if err != nil {
-		return
-	}
-	return
+	return false, nil
 }
 
 func (ouidb *OUIDB) Clear() (err error) {
@@ -67,8 +52,28 @@ func (ouidb *OUIDB) Clear() (err error) {
 	return
 }
 
+func (ouidb *OUIDB) Delete() error {
+	err := ouidb.Connection.Ping()
+	if err != nil {
+		return err
+	}
+	query, err := ouidb.Connection.Prepare(fmt.Sprintf("DROP TABLE %s", ouidb.Version))
+	if err != nil {
+		return err
+	}
+	_, err = query.Exec()
+	return err
+}
+
 func (ouidb *OUIDB) Insert(d *VendorDef) (res sql.Result, err error) {
-	s, err := ouidb.Connection.Prepare(fmt.Sprintf("INSERT INTO %s(prefix, length, org, registry) values(?,?,?,?)", ouidb.Version))
+	var q string
+	switch ouidb.dialect {
+	case dialectSqlite:
+		q = fmt.Sprintf("INSERT INTO %s(prefix, length, org, registry) values(?,?,?,?)", ouidb.Version)
+	case dialectPsql:
+		q = fmt.Sprintf("INSERT INTO %s(prefix, length, org, registry) values($1,$2,$3,$4) ON CONFLICT (prefix, length, registry) DO UPDATE SET prefix = excluded.prefix, length = excluded.length, registry = excluded.registry", ouidb.Version)
+	}
+	s, err := ouidb.Connection.Prepare(q)
 	if err != nil {
 		return
 	}
@@ -76,13 +81,24 @@ func (ouidb *OUIDB) Insert(d *VendorDef) (res sql.Result, err error) {
 	return
 }
 
-func (ouidb *OUIDB) Populate(p *progress.Progress) (records int64, err error) {
-	p.AdvanceTo(11)
+func (ouidb *OUIDB) Populate() (records int64, err error) {
 	err = ouidb.Clear()
 	if err != nil {
 		return
 	}
-	for _, def := range CollectAll(p, logger.New()) {
+	var p *progress.Progress = nil
+	var l LoggerType = nil
+	if ouidb.useLogging {
+		l = *ouidb.Logger
+	}
+	if ouidb.useProgress {
+		p = ouidb.Progress
+	}
+	defs, err := CollectAll(p, l)
+	if err != nil {
+		return
+	}
+	for _, def := range defs {
 		_, err = ouidb.Insert(def)
 		if err != nil {
 			return
@@ -148,72 +164,42 @@ func (ouidb *OUIDB) Close() error {
 	return ouidb.Connection.Close()
 }
 
-func tableExists(conn *sql.DB, ver string) (bool, error) {
-	q, err := conn.Prepare(fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", ver))
-	if err != nil {
-		return false, err
-	}
-	rs, err := q.Query()
-	if err != nil {
-		return false, err
-	}
-	defer rs.Close()
-
-	var table string
-	rs.Next()
-	rs.Scan(&table)
-	if table != "" {
-		return true, nil
-	}
-	return false, nil
-}
-
-func New(version string) (ouidb *OUIDB, err error) {
-	fileName, err := getFileName()
+func New(opts ...Option) (*OUIDB, error) {
+	options := getOptions(opts...)
+	err := options.Connection.Ping()
 	if err != nil {
 		return nil, err
 	}
-
-	var conn *sql.DB
-
-	if !util.PathExists(fileName) {
-		_, _, err = scaffold()
+	if options.dialect == dialectSqlite {
+		exists, err := tableExists(options.dialect, options.Connection, options.Version)
 		if err != nil {
 			return nil, err
 		}
-		conn, err = sql.Open("sqlite", fileName)
+		if !exists {
+			q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(256) NOT NULL, `registry` VARCHAR(32) NOT NULL , UNIQUE(prefix, length, registry) ON CONFLICT REPLACE )", options.Version)
+			_, err := options.Connection.Exec(q)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else if options.dialect == dialectPsql {
+		q := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v ( id SERIAL PRIMARY KEY, prefix VARCHAR(32) NOT NULL, length INT NOT NULL, org VARCHAR(256) NOT NULL, registry VARCHAR(32) NOT NULL, UNIQUE(prefix, length, registry) )", options.Version)
+		_, err := options.Connection.Exec(q)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		conn, err = sql.Open("sqlite", fileName)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("unknown SQL dialect")
 	}
 
-	err = conn.Ping()
-	if err != nil {
-		return
+	ouidb := &OUIDB{
+		Connection:  options.Connection,
+		Version:     options.Version,
+		Logger:      options.Logger,
+		Progress:    options.Progress,
+		useLogging:  options.Logger != nil,
+		useProgress: options.Progress != nil,
+		dialect:     options.dialect,
 	}
-
-	exists, err := tableExists(conn, version)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		q := fmt.Sprintf("CREATE TABLE `%s` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT, `prefix` VARCHAR(32) NOT NULL, `length` INTEGER NOT NULL, `org` VARCHAR(64) NOT NULL, `registry` VARCHAR(32) NOT NULL , UNIQUE(prefix, length, registry) ON CONFLICT REPLACE )", version)
-		_, err = conn.Exec(q)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	ouidb = &OUIDB{
-		FileName:   fileName,
-		Directory:  filepath.Dir(fileName),
-		Connection: conn,
-		Version:    version,
-	}
-	return
+	return ouidb, nil
 }
