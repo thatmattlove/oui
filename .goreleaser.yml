@@ -39,7 +39,7 @@ brews:
     commit_author:
       name: Matt Love
       email: matt@stunninglyclear.com
-    tap:
+    repository:
       owner: thatmattlove
       name: homebrew-oui
       token: '{{ .Env.TAP_GITHUB_TOKEN }}'
