@@ -30,12 +30,10 @@ jobs:
               with:
                   fetch-depth: 0
             - name: Setup Postgres
-              uses: ikalnytskyi/action-setup-postgres@v4
-              with:
-                  username: postgres
-                  password: postgres
-                  database: oui
-                  port: 5432
+              run: |
+                  psql postgres -c 'CREATE DATABASE oui;'
+                  psql postgres -c 'CREATE USER oui WITH PASSWORD "oui";'
+                  psql postgres -c 'ALTER DATABASE oui OWNER TO oui;'
 
             - name: Go Setup
               uses: actions/setup-go@v4
@@ -45,4 +43,4 @@ jobs:
             - name: Run Tests
               run: go test -v ./...
               env:
-                  POSTGRES_PASSWORD: postgres
+                  POSTGRES_PASSWORD: oui

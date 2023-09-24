@@ -21,18 +21,18 @@ func Test_New(t *testing.T) {
 		t.Parallel()
 		password := os.Getenv("POSTGRES_PASSWORD")
 		require.NotEqual(t, "", password)
-		cs := fmt.Sprintf("postgresql://oui:%s@localhost/oui", password)
+		cs := fmt.Sprintf("postgresql://oui:%s@localhost/oui?sslmode=disable", password)
 		psql, err := oui.CreatePostgresOption(cs)
 		require.NoError(t, err)
 		ouidb, err := oui.New(oui.WithVersion("test"), psql)
 		require.NoError(t, err)
+		t.Cleanup(func() {
+			ouidb.Clear()
+		})
 		t.Run("populate", func(t *testing.T) {
 			populated, err := ouidb.Populate()
 			require.NoError(t, err)
 			assert.NotZero(t, populated)
-			t.Cleanup(func() {
-				ouidb.Clear()
-			})
 		})
 		t.Run("count", func(t *testing.T) {
 			count, err := ouidb.Count()
