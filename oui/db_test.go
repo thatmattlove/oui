@@ -1,6 +1,8 @@
 package oui_test
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -14,9 +16,12 @@ func Test_New(t *testing.T) {
 	prefix := "00:50:56:00:00:00/24"
 	org := "VMware, Inc."
 	registry := "MA-L"
+
 	t.Run("postgres", func(t *testing.T) {
 		t.Parallel()
-		cs := "postgresql://oui:J5brHrAXFLQSif0K@localhost/oui?sslmode=disable"
+		password := os.Getenv("POSTGRES_PASSWORD")
+		require.NotEqual(t, "", password)
+		cs := fmt.Sprintf("postgresql://oui:%s@localhost/oui", password)
 		psql, err := oui.CreatePostgresOption(cs)
 		require.NoError(t, err)
 		ouidb, err := oui.New(oui.WithVersion("test"), psql)
