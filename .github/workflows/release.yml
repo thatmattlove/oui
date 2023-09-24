@@ -13,12 +13,14 @@ jobs:
               uses: actions/checkout@v3
               with:
                   fetch-depth: 0
+
             - name: Set up Go
               uses: actions/setup-go@v4
               with:
-                  go-version: 1.20
+                  go-version: 1.20.x
+
             - name: Run GoReleaser
-              uses: goreleaser/goreleaser-action@v4
+              uses: goreleaser/goreleaser-action@v5
               with:
                   version: latest
                   args: release --clean
@@ -26,6 +28,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   TAP_GITHUB_TOKEN: ${{ secrets.GORELEASER_PAT }}
                   FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
+
             - name: Upload assets
               uses: actions/upload-artifact@v3
               with:
