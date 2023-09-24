@@ -33,6 +33,7 @@ jobs:
               run: |
                   sudo systemctl start postgresql.service
                   pg_isready
+                  sudo -u postgres createuser -s -d -r -w runner
             - name: Setup Postgres
               run: |
                   psql postgres -c 'CREATE DATABASE oui;'
