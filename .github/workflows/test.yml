@@ -37,7 +37,7 @@ jobs:
             - name: Setup Postgres
               run: |
                   psql postgres -c 'CREATE DATABASE oui;'
-                  psql postgres -c 'CREATE USER oui WITH PASSWORD "oui";'
+                  psql postgres -c "CREATE USER oui WITH PASSWORD 'oui';"
                   psql postgres -c 'ALTER DATABASE oui OWNER TO oui;'
 
             - name: Go Setup
