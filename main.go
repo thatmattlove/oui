@@ -17,7 +17,7 @@ func getArgs() []string {
 
 func main() {
 	args := getArgs()
-	err := cmd.New(TABLE_VERSION).Run(args)
+	err := cmd.New(Version).Run(args)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

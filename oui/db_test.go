@@ -20,7 +20,7 @@ func Test_New(t *testing.T) {
 	t.Run("postgres", func(t *testing.T) {
 		t.Parallel()
 		password := os.Getenv("POSTGRES_PASSWORD")
-		require.NotEqual(t, "", password)
+		require.NotEqual(t, "", password, "missing POSTGRES_PASSWORD environment variable")
 		cs := fmt.Sprintf("postgresql://oui:%s@localhost/oui?sslmode=disable", password)
 		psql, err := oui.CreatePostgresOption(cs)
 		require.NoError(t, err)

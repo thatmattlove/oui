@@ -12,11 +12,12 @@ import (
 )
 
 type Options struct {
-	Logger     *LoggerType
-	Progress   *progress.Progress
-	Version    string
-	Connection *sql.DB
-	dialect    int
+	Logger         *LoggerType
+	Progress       *progress.Progress
+	Version        string
+	Connection     *sql.DB
+	dialect        int
+	MaxConnections uint
 }
 
 type Option func(*Options)
@@ -45,12 +46,19 @@ func WithConnection(conn *sql.DB) Option {
 	}
 }
 
+func WithMaxConnections(max uint) Option {
+	return func(opts *Options) {
+		opts.MaxConnections = max
+	}
+}
+
 func getOptions(setters ...Option) *Options {
 	options := &Options{
-		Logger:     nil,
-		Progress:   nil,
-		Version:    "default",
-		Connection: nil,
+		Logger:         nil,
+		Progress:       nil,
+		Version:        "default",
+		Connection:     nil,
+		MaxConnections: 0,
 	}
 	for _, setter := range setters {
 		setter(options)

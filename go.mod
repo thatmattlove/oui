@@ -7,6 +7,7 @@ require (
 	github.com/gookit/gcli/v3 v3.0.1
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b
 	github.com/jedib0t/go-pretty v4.3.0+incompatible
+	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.7.0
 	github.com/thatmattlove/go-macaddr v0.0.7
 	github.com/urfave/cli/v2 v2.3.0
@@ -25,12 +26,10 @@ require (
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/gookit/goutil v0.4.3 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect

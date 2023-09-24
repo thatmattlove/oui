@@ -26,3 +26,8 @@ const (
 	dialectSqlite int = iota
 	dialectPsql
 )
+
+const (
+	maxVarsSqlite int = 999
+	maxVarsPsql   int = 65535
+)

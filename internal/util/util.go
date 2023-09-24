@@ -43,3 +43,19 @@ func PathExists(n string) bool {
 func TimeSince(t time.Time) string {
 	return durafmt.Parse(time.Since(t)).LimitFirstN(1).String()
 }
+
+func SplitSlice[T any](slice []T, max int) [][]T {
+	result := make([][]T, 0)
+
+	for i := 0; i < len(slice); i += max {
+		end := i + max
+		if end > len(slice) {
+			end = len(slice)
+		}
+		part := slice[i:end]
+		if part != nil {
+			result = append(result, part)
+		}
+	}
+	return result
+}

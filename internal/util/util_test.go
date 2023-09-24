@@ -2,6 +2,7 @@ package util_test
 
 import (
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,4 +67,40 @@ func Test_pathExists(t *testing.T) {
 		r := util.PathExists(tf.Name())
 		assert.True(t, r)
 	})
+}
+
+func Test_SplitSlice(t *testing.T) {
+	t.Run("equal parts", func(t *testing.T) {
+		t.Parallel()
+		original := []int{1, 2, 3, 4, 5, 6}
+		max := 2
+		expected := [][]int{
+			{1, 2},
+			{3, 4},
+			{5, 6},
+		}
+		result := util.SplitSlice(original, max)
+		assert.True(t, reflect.DeepEqual(expected, result))
+	})
+	t.Run("unequal parts", func(t *testing.T) {
+		t.Parallel()
+		original := []int{1, 2, 3, 4, 5, 6}
+		max := 4
+		expected := [][]int{
+			{1, 2, 3, 4},
+			{5, 6},
+		}
+		result := util.SplitSlice(original, max)
+		assert.True(t, reflect.DeepEqual(expected, result))
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+		original := []string{}
+		max := 3
+		expected := [][]string{}
+		result := util.SplitSlice(original, max)
+		assert.Equal(t, expected, result)
+	})
+
 }

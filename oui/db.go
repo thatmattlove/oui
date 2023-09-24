@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
+	"github.com/thatmattlove/oui/v2/internal/util"
 )
 
 type OUIDB struct {
@@ -81,6 +83,59 @@ func (ouidb *OUIDB) Insert(d *VendorDef) (res sql.Result, err error) {
 	return
 }
 
+func (ouidb *OUIDB) BulkInsert(defs []*VendorDef) (int64, error) {
+
+	var statement string
+	var tmpl string
+	var maxRecords int
+	switch ouidb.dialect {
+	case dialectSqlite:
+		tmpl = "(?,?,?,?)"
+		statement = "INSERT INTO %s(prefix, length, org, registry) values%s"
+		maxRecords = maxVarsSqlite
+	case dialectPsql:
+		tmpl = "($%d,$%d,$%d,$%d)"
+		statement = "INSERT INTO %s(prefix, length, org, registry) values%s ON CONFLICT (prefix, length, registry) DO UPDATE SET prefix = excluded.prefix, length = excluded.length, registry = excluded.registry"
+		maxRecords = maxVarsPsql
+	}
+
+	splitDefs := util.SplitSlice(defs, maxRecords/4)
+	inserted := int64(0)
+
+	for _, split := range splitDefs {
+		placeholders := make([]string, 0, len(split))
+		args := make([]interface{}, 0, len(split)*4)
+		i := 0
+		for _, def := range split {
+			def := def
+			var placeholder string
+			switch ouidb.dialect {
+			case dialectSqlite:
+				placeholder = tmpl
+			case dialectPsql:
+				placeholder = fmt.Sprintf(tmpl, i*4+1, i*4+2, i*4+3, i*4+4)
+			}
+			placeholders = append(placeholders, placeholder)
+			args = append(args, def.Prefix, def.Length, def.Org, def.Registry)
+			i++
+		}
+		q := fmt.Sprintf(statement, ouidb.Version, strings.Join(placeholders, ","))
+		res, err := ouidb.Connection.Exec(q, args...)
+		if err != nil {
+			return inserted, err
+		}
+		rows, err := res.RowsAffected()
+		if err != nil {
+			return inserted, err
+		}
+		inserted += rows
+		if err != nil {
+			return inserted, err
+		}
+	}
+	return inserted, nil
+}
+
 func (ouidb *OUIDB) Populate() (records int64, err error) {
 	err = ouidb.Clear()
 	if err != nil {
@@ -98,12 +153,9 @@ func (ouidb *OUIDB) Populate() (records int64, err error) {
 	if err != nil {
 		return
 	}
-	for _, def := range defs {
-		_, err = ouidb.Insert(def)
-		if err != nil {
-			return
-		}
-		records++
+	records, err = ouidb.BulkInsert(defs)
+	if err != nil {
+		return
 	}
 	return
 }
@@ -184,6 +236,7 @@ func New(opts ...Option) (*OUIDB, error) {
 		}
 	} else if options.dialect == dialectPsql {
 		q := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v ( id SERIAL PRIMARY KEY, prefix VARCHAR(32) NOT NULL, length INT NOT NULL, org VARCHAR(256) NOT NULL, registry VARCHAR(32) NOT NULL, UNIQUE(prefix, length, registry) )", options.Version)
+		options.Connection.SetMaxOpenConns(int(options.MaxConnections))
 		_, err := options.Connection.Exec(q)
 		if err != nil {
 			return nil, err
