@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/thatmattlove/oui/cmd"
+	"github.com/thatmattlove/oui/v2/cmd"
 )
 
 func getArgs() []string {

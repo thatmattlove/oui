@@ -7,7 +7,7 @@ import (
 
 	"github.com/gookit/gcli/v3/progress"
 	_ "github.com/lib/pq"
-	"github.com/thatmattlove/oui/internal/util"
+	"github.com/thatmattlove/oui/v2/internal/util"
 	_ "modernc.org/sqlite"
 )
 

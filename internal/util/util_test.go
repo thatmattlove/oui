@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/thatmattlove/oui/internal/util"
+	"github.com/thatmattlove/oui/v2/internal/util"
 )
 
 func Test_removeComments(t *testing.T) {

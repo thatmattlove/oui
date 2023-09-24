@@ -1,4 +1,4 @@
-module github.com/thatmattlove/oui
+module github.com/thatmattlove/oui/v2
 
 go 1.20
 

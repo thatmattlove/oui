@@ -4,7 +4,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/thatmattlove/oui/internal/logger"
+	"github.com/thatmattlove/oui/v2/internal/logger"
 )
 
 func Test_Logger(t *testing.T) {

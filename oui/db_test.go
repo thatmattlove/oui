@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/thatmattlove/oui/oui"
+	"github.com/thatmattlove/oui/v2/oui"
 )
 
 func Test_New(t *testing.T) {
