@@ -245,6 +245,12 @@ func New(opts ...Option) (*OUIDB, error) {
 		return nil, fmt.Errorf("unknown SQL dialect")
 	}
 
+	indexQ := fmt.Sprintf("CREATE INDEX IF NOT EXISTS prefix_idx ON %v (prefix)", options.Version)
+	_, err = options.Connection.Exec(indexQ)
+	if err != nil {
+		return nil, err
+	}
+
 	ouidb := &OUIDB{
 		Connection:  options.Connection,
 		Version:     options.Version,
