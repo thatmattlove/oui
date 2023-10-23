@@ -2,8 +2,10 @@ package oui
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/gookit/gcli/v3/progress"
 	_ "github.com/lib/pq"
@@ -22,6 +24,19 @@ type Options struct {
 
 type Option func(*Options)
 
+func sanitizeVersion(v string) string {
+	if len(v) == 0 {
+		return "default"
+	}
+	first := regexp.MustCompile(`^[0-9].*`)
+	if first.MatchString(v) {
+		v = fmt.Sprintf("oui_%s", v)
+	}
+	repl := regexp.MustCompile(`[^A-Za-z0-9_]`)
+	v = repl.ReplaceAllString(v, "__")
+	return v
+}
+
 func WithProgress(p *progress.Progress) Option {
 	return func(opts *Options) {
 		opts.Progress = p
@@ -36,7 +51,7 @@ func WithLogging(logger LoggerType) Option {
 
 func WithVersion(version string) Option {
 	return func(opts *Options) {
-		opts.Version = version
+		opts.Version = sanitizeVersion(version)
 	}
 }
 
