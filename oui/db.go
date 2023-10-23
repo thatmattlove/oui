@@ -2,7 +2,9 @@ package oui
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -177,18 +179,22 @@ func (ouidb *OUIDB) Count() (count int64, err error) {
 	return
 }
 
-func (ouidb *OUIDB) Find(search string) (matches []*VendorDef, err error) {
+func (ouidb *OUIDB) Find(search string) ([]*VendorDef, error) {
 	mac, err := macaddr.ParseMACAddress(search)
 	if err != nil {
-		return matches, err
+		return nil, err
 	}
 	q := fmt.Sprintf("SELECT prefix,length,org,registry FROM %s WHERE prefix LIKE '%s%%'", ouidb.Version, mac.OUI())
+	log.Println(q)
 	rows, err := ouidb.Connection.Query(q)
 	if err != nil {
-		return matches, err
+		return nil, err
 	}
 
 	defer rows.Close()
+
+	errs := make([]error, 0)
+	matches := make([]*VendorDef, 0)
 
 	for rows.Next() {
 		var prefix string
@@ -197,17 +203,23 @@ func (ouidb *OUIDB) Find(search string) (matches []*VendorDef, err error) {
 		var reg string
 		err = rows.Scan(&prefix, &length, &org, &reg)
 		if err != nil {
-			return matches, err
+			errs = append(errs, err)
+			continue
 		}
 		def := &VendorDef{Prefix: prefix, Length: length, Org: org, Registry: reg}
 		_, mp, err := macaddr.ParseMACPrefix(def.PrefixString())
 		if err != nil {
-			return matches, err
+			errs = append(errs, err)
+			continue
 		}
 		_, failure := mp.Match(search)
 		if failure == nil {
 			matches = append(matches, def)
 		}
+	}
+	err = errors.Join(errs...)
+	if err != nil {
+		return nil, err
 	}
 	return matches, nil
 }
