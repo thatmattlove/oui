@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -185,7 +184,6 @@ func (ouidb *OUIDB) Find(search string) ([]*VendorDef, error) {
 		return nil, err
 	}
 	q := fmt.Sprintf("SELECT prefix,length,org,registry FROM %s WHERE prefix LIKE '%s%%'", ouidb.Version, mac.OUI())
-	log.Println(q)
 	rows, err := ouidb.Connection.Query(q)
 	if err != nil {
 		return nil, err
