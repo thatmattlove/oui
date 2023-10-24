@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/jedib0t/go-pretty/table"
@@ -11,17 +13,24 @@ import (
 	"github.com/thatmattlove/oui/v2/internal/util"
 	"github.com/thatmattlove/oui/v2/oui"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/term"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
 
-func resultsTitle(search string) string {
+func resultsTitleDetail(search string) string {
 	s := &text.Colors{text.FgHiCyan, text.Bold, text.Underline}
 	t := &text.Colors{text.Bold}
 	return fmt.Sprintf("\n %s%s\n", s.Sprint(search), t.Sprint(" Results"))
 }
 
-func createTable(search string) (t table.Writer) {
+func resultsTitleSummary(num int) string {
+	s := &text.Colors{text.FgHiCyan, text.Bold, text.Underline}
+	t := &text.Colors{text.Bold}
+	return fmt.Sprintf("\n %s%s%s\n", t.Sprint("Results for "), s.Sprint(num), t.Sprint(" Addresses"))
+}
+
+func createTable() (t table.Writer) {
 	t = table.NewWriter()
 	t.SetStyle(*tableStyle)
 	h := &text.Colors{text.FgHiMagenta, text.Bold}
@@ -56,7 +65,8 @@ func CountCmd() *cli.Command {
 
 func MainCmd(c *cli.Context) error {
 	log := logger.New()
-	search := c.Args().First()
+
+	searches := c.Args().Slice()
 
 	sqlite, err := oui.CreateSQLiteOption()
 	if err != nil {
@@ -80,19 +90,30 @@ func MainCmd(c *cli.Context) error {
 		}
 	}
 
-	results, err := db.Find(search)
-	if err != nil {
-		return err
+	t := createTable()
+
+	title := resultsTitleDetail(strings.Join(searches, ", "))
+
+	fd := int(os.Stdin.Fd())
+
+	if term.IsTerminal(fd) {
+		w, _, err := term.GetSize(fd)
+		if err == nil && len(title) > w {
+			title = resultsTitleSummary(len(searches))
+		}
+	} else {
+		title = resultsTitleSummary(len(searches))
 	}
 
-	t := createTable(search)
-	fmt.Println(resultsTitle(search))
+	fmt.Println(title)
 
-	if len(results) == 0 {
-		log.Error("\n No results found\n\n")
-	} else {
-		for _, result := range results {
-			_, mp, err := macaddr.ParseMACPrefix(result.PrefixString())
+	for _, search := range searches {
+		results, err := db.Find(search)
+		if err != nil {
+			return err
+		}
+		if len(results) == 0 {
+			_, mp, err := macaddr.ParseMACPrefix(search)
 			if err != nil {
 				return err
 			}
@@ -101,10 +122,25 @@ func MainCmd(c *cli.Context) error {
 			rf := text.FgHiCyan.Sprint(mp.First())
 			rl := text.FgHiRed.Sprint(mp.Last())
 			r := fmt.Sprintf("%s-%s", rf, rl)
-			t.AppendRow(table.Row{m + p, result.Org, r, result.Registry})
+			nf := (&text.Colors{text.FgHiYellow, text.Italic}).Sprint("Not Found")
+			t.AppendRow(table.Row{m + p, nf, r, nf})
+		} else {
+			for _, result := range results {
+				_, mp, err := macaddr.ParseMACPrefix(result.PrefixString())
+				if err != nil {
+					return err
+				}
+				m := (&text.Colors{text.FgHiGreen, text.Bold}).Sprint(mp.MAC.String())
+				p := text.FgHiCyan.Sprintf("/%d", mp.PrefixLen())
+				rf := text.FgHiCyan.Sprint(mp.First())
+				rl := text.FgHiRed.Sprint(mp.Last())
+				r := fmt.Sprintf("%s-%s", rf, rl)
+				t.AppendRow(table.Row{m + p, result.Org, r, result.Registry})
+			}
 		}
-		fmt.Println(t.Render())
 	}
+	fmt.Println(t.Render())
+
 	return nil
 }
 
