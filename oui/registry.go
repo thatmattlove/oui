@@ -14,10 +14,11 @@ const (
 )
 
 type Registry struct {
-	Name          string
-	BaseURL       string
-	FilePrefix    string
-	FileExtension string
+	Name             string
+	BaseURL          string
+	FilePrefix       string
+	FileExtension    string
+	DefaultPrefixLen uint8
 }
 
 func (reg *Registry) URL() *url.URL {
@@ -39,10 +40,9 @@ func (reg *Registry) TempFilePattern() string {
 
 func Registries() []*Registry {
 	return []*Registry{
-		{Name: REGISTRY_OUI, BaseURL: "https://standards-oui.ieee.org/oui", FilePrefix: "oui", FileExtension: "csv"},
-		{Name: REGISTRY_CID, BaseURL: "https://standards-oui.ieee.org/cid", FilePrefix: "cid", FileExtension: "csv"},
-		{Name: REGISTRY_IAB, BaseURL: "https://standards-oui.ieee.org/iab", FilePrefix: "iab", FileExtension: "csv"},
-		{Name: REGISTRY_OUI28, BaseURL: "https://standards-oui.ieee.org/oui28", FilePrefix: "mam", FileExtension: "csv"},
-		{Name: REGISTRY_OUI36, BaseURL: "https://standards-oui.ieee.org/oui36", FilePrefix: "oui36", FileExtension: "csv"},
+		{Name: REGISTRY_OUI, BaseURL: "https://standards-oui.ieee.org/oui", FilePrefix: "oui", FileExtension: "csv", DefaultPrefixLen: 24},
+		{Name: REGISTRY_CID, BaseURL: "https://standards-oui.ieee.org/cid", FilePrefix: "cid", FileExtension: "csv", DefaultPrefixLen: 24},
+		{Name: REGISTRY_OUI28, BaseURL: "https://standards-oui.ieee.org/oui28", FilePrefix: "mam", FileExtension: "csv", DefaultPrefixLen: 28},
+		{Name: REGISTRY_OUI36, BaseURL: "https://standards-oui.ieee.org/oui36", FilePrefix: "oui36", FileExtension: "csv", DefaultPrefixLen: 36},
 	}
 }

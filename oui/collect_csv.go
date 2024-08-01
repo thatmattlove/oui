@@ -75,7 +75,7 @@ func ReadCSV(registry *Registry, fileName string, logger LoggerType) (results []
 		}
 		assignment := strings.TrimSpace(row[1])
 		if !strings.Contains(assignment, "/") {
-			assignment += "/24"
+			assignment += fmt.Sprintf("/%d", registry.DefaultPrefixLen)
 		}
 		organization := row[2]
 		org := strings.TrimSpace(organization)
