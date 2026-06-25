@@ -30,6 +30,9 @@ func DownloadCSV(registry *Registry) (fileName string, err error) {
 	if err != nil {
 		return
 	}
+	if res.StatusCode != 200 {
+		return "", fmt.Errorf("[%s] failed to download data from %s error: [%s] %v", registry.Name, registry.URL(), res.Status, string(b))
+	}
 	_, err = file.Write(b)
 	return
 }
