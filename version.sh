@@ -70,7 +70,7 @@ if [[ "$GIT_COMMIT_ERR" != "" ]]; then
 fi
 
 # Capture stderr from adding git tag.
-GIT_TAG_ERR="$(git tag $TAG 2>&1)"
+GIT_TAG_ERR="$(git tag $TAG -m $TAG 2>&1)"
 
 # Print any errors from git and exit.
 if [[ "$GIT_TAG_ERR" != "" ]]; then
