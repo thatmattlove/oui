@@ -26,7 +26,7 @@ jobs:
                   args: release --clean
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  TAP_GITHUB_TOKEN: ${{ secrets.GORELEASER_PAT }}
+                  HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
                   FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
 
             - name: Upload assets
