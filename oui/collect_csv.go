@@ -8,42 +8,54 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gookit/gcli/v3/progress"
 	"github.com/thatmattlove/go-macaddr"
 )
 
-func DownloadCSV(registry *Registry) (fileName string, err error) {
-	file, err := os.CreateTemp("", registry.TempFilePattern())
+func DownloadCSV(registry *Registry) (string, error) {
+	client := http.DefaultClient
+	client.Timeout = 30 * time.Second
+
+	req, err := http.NewRequest(http.MethodGet, registry.URL().String(), nil)
 	if err != nil {
-		return
+		return "", err
 	}
-	defer file.Close()
-	fileName = file.Name()
-	res, err := http.Get(registry.URL().String())
+	req.Header.Set("user-agent", "oui")
+	res, err := client.Do(req)
 	if err != nil {
-		return
+		if os.IsTimeout(err) {
+			return "", fmt.Errorf("request timed out: %w", err)
+		}
+		return "", err
 	}
 	defer res.Body.Close()
 
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return
+		return "", err
 	}
 	if res.StatusCode != 200 {
 		return "", fmt.Errorf("[%s] failed to download data from %s error: [%s] %v", registry.Name, registry.URL(), res.Status, string(b))
 	}
+	file, err := os.CreateTemp("", registry.TempFilePattern())
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
 	_, err = file.Write(b)
-	return
+	return file.Name(), nil
 }
 
-func ReadCSV(registry *Registry, fileName string, logger LoggerType) (results []*VendorDef) {
+func ReadCSV(registry *Registry, fileName string, logger LoggerType) ([]*VendorDef, error) {
+	results := make([]*VendorDef, 0)
 	file, err := os.Open(fileName)
 	if err != nil {
 		if logger != nil {
 			logger.Err(err)
 		}
-		panic(err)
+		return nil, err
 	}
 	defer file.Close()
 	reader := csv.NewReader(file)
@@ -99,7 +111,7 @@ func ReadCSV(registry *Registry, fileName string, logger LoggerType) (results []
 		}
 		results = append(results, v)
 	}
-	return
+	return results, nil
 }
 
 func CollectAll(p *progress.Progress, logger LoggerType) ([]*VendorDef, error) {
@@ -117,7 +129,11 @@ func CollectAll(p *progress.Progress, logger LoggerType) ([]*VendorDef, error) {
 				logger.Err(err, "failed to download file '%s'", reg.FileName())
 			}
 		}
-		defs = append(defs, ReadCSV(reg, fileName, logger)...)
+		results, err := ReadCSV(reg, fileName, logger)
+		if err != nil {
+			return nil, err
+		}
+		defs = append(defs, results...)
 	}
 	err := errors.Join(errs...)
 	return defs, err
