@@ -3,24 +3,24 @@ name: release
 on:
     push:
         tags:
-            - "*"
+            - '*'
 
 jobs:
     goreleaser:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v3
+              uses: actions/checkout@v7
               with:
                   fetch-depth: 0
 
             - name: Set up Go
-              uses: actions/setup-go@v4
+              uses: actions/setup-go@v6
               with:
-                  go-version: 1.20.x
+                  go-version: 1.26.x
 
             - name: Run GoReleaser
-              uses: goreleaser/goreleaser-action@v5
+              uses: goreleaser/goreleaser-action@v7
               with:
                   version: latest
                   args: release --clean
@@ -30,6 +30,6 @@ jobs:
                   FURY_TOKEN: ${{ secrets.FURY_TOKEN }}
 
             - name: Upload assets
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v7
               with:
                   path: dist/*
