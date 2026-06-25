@@ -39,7 +39,7 @@ homebrew_casks:
     license: BSD-3-Clause-Clear
     commit_author:
       name: Matt Love
-      email: matt@mdl.wtf>
+      email: matt@mdl.wtf
     repository:
       owner: thatmattlove
       name: homebrew-oui
