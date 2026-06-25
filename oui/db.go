@@ -42,6 +42,19 @@ func tableExists(dialect int, conn *sql.DB, ver string) (bool, error) {
 	return false, nil
 }
 
+func dbExists(dialect int, conn *sql.DB) (bool, error) {
+	if dialect != dialectPsql {
+		return false, fmt.Errorf("must be Postgres to use dbExists")
+	}
+	var exists bool
+	q := "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)"
+	err := conn.QueryRow(q, "oui").Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 func (ouidb *OUIDB) Clear() (err error) {
 	err = ouidb.Connection.Ping()
 	if err != nil {
@@ -232,7 +245,8 @@ func New(opts ...Option) (*OUIDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if options.dialect == dialectSqlite {
+	switch options.dialect {
+	case dialectSqlite:
 		exists, err := tableExists(options.dialect, options.Connection, options.Version)
 		if err != nil {
 			return nil, err
@@ -244,14 +258,24 @@ func New(opts ...Option) (*OUIDB, error) {
 				return nil, err
 			}
 		}
-	} else if options.dialect == dialectPsql {
-		q := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v ( id SERIAL PRIMARY KEY, prefix VARCHAR(32) NOT NULL, length INT NOT NULL, org VARCHAR(256) NOT NULL, registry VARCHAR(32) NOT NULL, UNIQUE(prefix, length, registry) )", options.Version)
-		options.Connection.SetMaxOpenConns(int(options.MaxConnections))
-		_, err := options.Connection.Exec(q)
+	case dialectPsql:
+		dbe, err := dbExists(dialectPsql, options.Connection)
 		if err != nil {
 			return nil, err
 		}
-	} else {
+		if !dbe {
+			_, err := options.Connection.Exec("CREATE DATABASE oui")
+			if err != nil {
+				return nil, err
+			}
+		}
+		q := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %v ( id SERIAL PRIMARY KEY, prefix VARCHAR(32) NOT NULL, length INT NOT NULL, org VARCHAR(256) NOT NULL, registry VARCHAR(32) NOT NULL, UNIQUE(prefix, length, registry) )", options.Version)
+		options.Connection.SetMaxOpenConns(int(options.MaxConnections))
+		_, err = options.Connection.Exec(q)
+		if err != nil {
+			return nil, err
+		}
+	default:
 		return nil, fmt.Errorf("unknown SQL dialect")
 	}
 
