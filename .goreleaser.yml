@@ -1,3 +1,4 @@
+---
 before:
   hooks:
     - go mod download
@@ -31,23 +32,23 @@ changelog:
       - '^docs:'
       - '^test:'
 
-brews:
+homebrew_casks:
   - name: oui
     homepage: https://github.com/thatmattlove/oui
     description: MAC Address CLI Toolkit
     license: BSD-3-Clause-Clear
     commit_author:
       name: Matt Love
-      email: matt@stunninglyclear.com
+      email: matt@mdl.wtf>
     repository:
       owner: thatmattlove
       name: homebrew-oui
-      token: '{{ .Env.TAP_GITHUB_TOKEN }}'
+      token: '{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}'
 
 nfpms:
   - id: linux_packages
     homepage: https://github.com/thatmattlove/oui
-    maintainer: Matt Love <matt@stunninglyclear.com>
+    maintainer: Matt Love <matt@mdl.wtf>
     description: MAC Address CLI Toolkit
     license: BSD-3-Clause-Clear
     formats:
